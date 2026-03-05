@@ -1,0 +1,42 @@
+{
+  "_comment": "Pokemon with base stat changes across generations. Format: pokemon_id -> {gen_number: {stat: value}}. Only stats that DIFFER from current values are listed.",
+  "25": {
+    "_name": "Pikachu",
+    "1": {"special": 50, "speed": 90},
+    "5": {"defense": 30},
+    "6": {"defense": 40, "sp_defense": 50}
+  },
+  "26": {
+    "_name": "Raichu",
+    "1": {"special": 90, "speed": 100}
+  },
+  "36": {
+    "_name": "Clefable",
+    "1": {"special": 85},
+    "5": {"sp_attack": 85, "sp_defense": 90}
+  },
+  "45": {
+    "_name": "Vileplume",
+    "1": {"special": 100},
+    "5": {"sp_attack": 100}
+  },
+  "65": {
+    "_name": "Alakazam",
+    "1": {"special": 135},
+    "5": {"sp_defense": 85},
+    "6": {"sp_defense": 95}
+  },
+  "76": {
+    "_name": "Golem",
+    "1": {"special": 55}
+  },
+  "101": {
+    "_name": "Electrode",
+    "1": {"special": 80}
+  },
+  "121": {
+    "_name": "Starmie",
+    "1": {"special": 100}
+  },
+  "_note": "This is a partial list of the most notable stat changes. Gen 1 'special' was a single stat split into sp_attack and sp_defense in Gen 2. Gen 6 saw many small buffs. A more complete list can be compiled from veekun/pokedex or PokemonDB."
+}

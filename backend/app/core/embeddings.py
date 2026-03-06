@@ -1,8 +1,16 @@
 from langchain_core.embeddings import Embeddings
 
+DEFAULT_HF_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
-def get_embeddings(provider: str = "gemini", **kwargs) -> Embeddings:
-    if provider == "gemini":
+
+def get_embeddings(provider: str = "huggingface", **kwargs) -> Embeddings:
+    if provider == "huggingface":
+        from langchain_huggingface import HuggingFaceEmbeddings
+
+        return HuggingFaceEmbeddings(
+            model_name=kwargs.get("model", DEFAULT_HF_MODEL),
+        )
+    elif provider == "gemini":
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
         return GoogleGenerativeAIEmbeddings(

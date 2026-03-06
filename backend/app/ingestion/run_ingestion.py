@@ -79,11 +79,13 @@ async def main(max_id: int, force: bool, generations: list[int]):
     embeddings = get_embeddings(
         settings.embedding_provider, model=settings.embedding_model
     )
+    use_api_delay = settings.embedding_provider in ("gemini", "openai")
     index_documents(
         documents=all_docs,
         embeddings=embeddings,
         persist_dir=persist_dir,
         collection_name=settings.chroma_collection_name,
+        use_api_delay=use_api_delay,
     )
 
 

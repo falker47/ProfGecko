@@ -1,23 +1,36 @@
 import asyncio
+import logging
 
 from tqdm import tqdm
 
 from app.ingestion.pokeapi_client import PokeAPIClient
 
+logger = logging.getLogger(__name__)
+
 
 async def _fetch_batch(client: PokeAPIClient, coro_fn, ids: list[int], desc: str):
-    """Fetch a batch of items with progress bar."""
+    """Fetch a batch of items with progress bar. Skips 404s gracefully."""
     results = {}
     tasks = [coro_fn(i) for i in ids]
+    skipped = 0
 
     with tqdm(total=len(ids), desc=desc) as pbar:
         for coro in asyncio.as_completed(tasks):
-            data = await coro
-            item_id = data.get("id", None)
-            if item_id is not None:
-                results[item_id] = data
+            try:
+                data = await coro
+                item_id = data.get("id", None)
+                if item_id is not None:
+                    results[item_id] = data
+            except Exception as e:
+                skipped += 1
+                logger.debug("Skipped: %s", e)
             pbar.update(1)
 
+    if skipped:
+        logger.info(
+            "%s: fetched %d, skipped %d (not found/errors)",
+            desc, len(results), skipped,
+        )
     return results
 
 

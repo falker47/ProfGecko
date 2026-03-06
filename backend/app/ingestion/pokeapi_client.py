@@ -1,11 +1,21 @@
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://pokeapi.co/api/v2"
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Retry solo su errori server/rete, non su 404 e altri errori client."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code >= 500
+    return True  # Retry su connection errors, timeouts, etc.
 
 
 class PokeAPIClient:
@@ -33,7 +43,11 @@ class PokeAPIClient:
         safe_name = path.strip("/").replace("/", "_")
         return self.cache_dir / f"{safe_name}.json"
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(min=1, max=10),
+        retry=retry_if_exception(_is_retryable),
+    )
     async def _fetch(self, path: str) -> dict:
         assert self._client is not None
         async with self._semaphore:

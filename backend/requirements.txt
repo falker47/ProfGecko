@@ -8,8 +8,13 @@ langchain>=0.3.0
 langchain-core>=0.3.0
 langchain-community>=0.3.0
 
-# LLM + Embeddings (Gemini)
+# LLM (Gemini default, Ollama for local testing)
 langchain-google-genai>=2.0.0
+langchain-ollama>=0.2.0
+
+# Embeddings (local HuggingFace)
+langchain-huggingface>=0.1.0
+sentence-transformers>=3.0.0
 
 # Vector store
 langchain-chroma>=0.2.0

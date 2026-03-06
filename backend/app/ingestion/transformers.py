@@ -21,9 +21,10 @@ def _get_localized(entries: list[dict], lang: str, key: str = "name") -> str:
 def _get_flavor_text(entries: list[dict], lang: str) -> str:
     """Get the most recent flavor text in the given language."""
     texts = [
-        e["flavor_text"].replace("\n", " ").replace("\f", " ")
+        (e.get("flavor_text") or e.get("text", "")).replace("\n", " ").replace("\f", " ")
         for e in entries
         if e.get("language", {}).get("name") == lang
+        and (e.get("flavor_text") or e.get("text"))
     ]
     return texts[-1] if texts else ""
 

@@ -18,5 +18,12 @@ def get_llm(provider: str = "gemini", **kwargs) -> BaseChatModel:
             temperature=kwargs.get("temperature", 0.7),
             streaming=True,
         )
+    elif provider == "ollama":
+        from langchain_ollama import ChatOllama
+
+        return ChatOllama(
+            model=kwargs.get("model", "gemma3:4b"),
+            temperature=kwargs.get("temperature", 0.7),
+        )
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")

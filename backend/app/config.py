@@ -5,8 +5,8 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    # Google API
-    google_api_key: str
+    # Google API (optional — not needed when using Ollama + HuggingFace)
+    google_api_key: str = ""
 
     # LLM
     llm_provider: str = "gemini"
@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.7
 
     # Embeddings
-    embedding_provider: str = "gemini"
-    embedding_model: str = "models/gemini-embedding-001"
+    embedding_provider: str = "huggingface"
+    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
     # ChromaDB
     chroma_persist_dir: str = "data/chroma_db"

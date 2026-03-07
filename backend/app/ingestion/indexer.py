@@ -36,7 +36,16 @@ def index_documents(
     total_batches = (len(documents) + BATCH_SIZE - 1) // BATCH_SIZE
     delay = API_BATCH_DELAY if use_api_delay else 0
 
-    print(f"\nIndexing {len(documents)} documents into ChromaDB...")
+    # Pulisci la collezione esistente per evitare duplicati
+    import chromadb
+    client = chromadb.PersistentClient(path=persist_dir)
+    try:
+        client.delete_collection(name=collection_name)
+        print(f"\nCleared existing collection '{collection_name}'")
+    except ValueError:
+        print(f"\nNo existing collection '{collection_name}' to clear")
+
+    print(f"Indexing {len(documents)} documents into ChromaDB...")
     print(f"  Persist dir: {persist_dir}")
     print(f"  Collection: {collection_name}")
     print(f"  Batch size: {BATCH_SIZE}")

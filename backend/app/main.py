@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,6 +10,15 @@ from app.core.embeddings import get_embeddings
 from app.core.llm import get_llm
 from app.core.rag_chain import RAGChain
 from app.core.vectorstore import get_vectorstore
+
+# Configura logging — mostra INFO per i moduli app, WARNING per librerie rumorose
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logging.getLogger("chromadb").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 @asynccontextmanager

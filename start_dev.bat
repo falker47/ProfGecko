@@ -8,11 +8,11 @@ echo ============================================
 echo.
 
 :: Avvia il backend in una nuova finestra
-echo [1/3] Avvio Backend (FastAPI su porta 8000)...
+echo [1/2] Avvio Backend (FastAPI su porta 8000)...
 start "Prof. Gallade Backend" cmd /k "cd /d "%~dp0backend" && call .venv\Scripts\activate && uvicorn app.main:app --reload --port 8000"
 
 :: Avvia il frontend in una nuova finestra
-echo [2/3] Avvio Frontend (Next.js su porta 3000)...
+echo [2/2] Avvio Frontend (Next.js su porta 3000)...
 start "Prof. Gallade Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
 
 echo.

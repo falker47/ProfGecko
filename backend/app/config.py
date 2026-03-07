@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     chroma_collection_name: str = "pokemon_knowledge"
 
     # Retriever
-    retriever_k: int = 5
+    retriever_k: int = 12
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000"]

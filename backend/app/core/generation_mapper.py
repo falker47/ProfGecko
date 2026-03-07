@@ -39,8 +39,9 @@ GAME_TO_GENERATION: dict[str, int] = {
     "scarlet": 9, "violet": 9,
 }
 
-# Explicit gen references
+# Explicit gen references (formali + abbreviazioni informali)
 GEN_KEYWORDS: dict[str, int] = {
+    # Formale: "generazione N", "prima generazione", "gen N"
     "gen 1": 1, "gen1": 1, "generazione 1": 1, "prima generazione": 1,
     "gen 2": 2, "gen2": 2, "generazione 2": 2, "seconda generazione": 2,
     "gen 3": 3, "gen3": 3, "generazione 3": 3, "terza generazione": 3,
@@ -50,6 +51,10 @@ GEN_KEYWORDS: dict[str, int] = {
     "gen 7": 7, "gen7": 7, "generazione 7": 7, "settima generazione": 7,
     "gen 8": 8, "gen8": 8, "generazione 8": 8, "ottava generazione": 8,
     "gen 9": 9, "gen9": 9, "generazione 9": 9, "nona generazione": 9,
+    # Abbreviazioni informali (es. "in terza gen", "nella prima gen")
+    "prima gen": 1, "seconda gen": 2, "terza gen": 3, "quarta gen": 4,
+    "quinta gen": 5, "sesta gen": 6, "settima gen": 7, "ottava gen": 8,
+    "nona gen": 9,
 }
 
 # Max Pokemon national dex number per generation

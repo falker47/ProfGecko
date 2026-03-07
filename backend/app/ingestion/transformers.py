@@ -36,12 +36,55 @@ def _get_stat(stats: list[dict], stat_name: str) -> int:
     return 0
 
 
-def _parse_evolution_chain(chain: dict) -> list[str]:
-    """Recursively extract species names from an evolution chain."""
-    names = [chain["species"]["name"]]
-    for evo in chain.get("evolves_to", []):
-        names.extend(_parse_evolution_chain(evo))
-    return names
+def _format_evo_trigger(
+    details: list[dict],
+    item_name_lookup: dict[str, str] | None = None,
+) -> str:
+    """Formatta il metodo di evoluzione dal campo evolution_details di PokeAPI.
+
+    Restituisce una descrizione breve in italiano del trigger.
+    item_name_lookup mappa slug EN -> nome IT (es. "sun-stone" -> "Pietra Solare").
+    """
+    if not details:
+        return ""
+
+    lookup = item_name_lookup or {}
+
+    # Prendi il primo dettaglio (di solito ce n'e' uno solo)
+    d = details[0]
+    trigger = d.get("trigger", {}).get("name", "")
+    level = d.get("min_level")
+    item = d.get("item")
+    held_item = d.get("held_item")
+    happiness = d.get("min_happiness")
+    time_of_day = d.get("time_of_day", "")
+
+    if trigger == "level-up":
+        parts = []
+        if level:
+            parts.append(f"Lv.{level}")
+        if happiness is not None:
+            parts.append("felicita")
+        if time_of_day:
+            tod_it = {"day": "giorno", "night": "notte"}.get(time_of_day, time_of_day)
+            parts.append(f"di {tod_it}")
+        return f" ({', '.join(parts)})" if parts else ""
+    elif trigger == "trade":
+        if held_item:
+            slug = held_item.get("name", "")
+            item_name = lookup.get(slug, slug.replace("-", " ").title())
+            return f" (scambio con {item_name})"
+        return " (scambio)"
+    elif trigger == "use-item":
+        if item:
+            slug = item.get("name", "")
+            item_name = lookup.get(slug, slug.replace("-", " ").title())
+            return f" ({item_name})"
+        return " (strumento)"
+    elif trigger == "shed":
+        return " (slot vuoto + Poke Ball)"
+    else:
+        return ""
 
 
 def _format_evolution_chain(
@@ -49,11 +92,12 @@ def _format_evolution_chain(
     species_data: dict[int, dict],
     generation: int,
     name_lookup: dict[str, str] | None = None,
+    item_name_lookup: dict[str, str] | None = None,
 ) -> str:
-    """Formatta la catena evolutiva con ramificazioni e filtro generazione.
+    """Formatta la catena evolutiva con ramificazioni, metodi e filtro generazione.
 
-    Risultato per Eevee gen 1: ``Eevee -> Vaporeon / Jolteon / Flareon``
-    Risultato per Eevee gen 9: ``Eevee -> Vaporeon / Jolteon / ... / Sylveon``
+    Risultato per Machop: ``Machop -> Machoke (Lv.28) -> Machamp (scambio)``
+    Risultato per Eevee gen 1: ``Eevee -> Vaporeon (Pietra Idrica) / Jolteon (Pietratuono) / ...``
     """
     species_name = chain["species"]["name"]
 
@@ -77,22 +121,28 @@ def _format_evolution_chain(
         else species_name.capitalize()
     )
 
+    # Aggiungi il metodo di evoluzione (se presente)
+    evo_details = chain.get("evolution_details", [])
+    trigger_text = _format_evo_trigger(evo_details, item_name_lookup)
+
     # Raccoglie le evoluzioni valide per questa generazione
     branches: list[str] = []
     for evo in chain.get("evolves_to", []):
         branch_text = _format_evolution_chain(
-            evo, species_data, generation, name_lookup,
+            evo, species_data, generation, name_lookup, item_name_lookup,
         )
         if branch_text:
             branches.append(branch_text)
 
+    current = f"{display_name}{trigger_text}"
+
     if not branches:
-        return display_name
+        return current
     elif len(branches) == 1:
-        return f"{display_name} -> {branches[0]}"
+        return f"{current} -> {branches[0]}"
     else:
         # Ramificazione: formato con barra
-        return f"{display_name} -> {' / '.join(branches)}"
+        return f"{current} -> {' / '.join(branches)}"
 
 
 def _get_type_name_it(type_data: dict) -> str:
@@ -149,13 +199,23 @@ def _get_pokemon_abilities_for_gen(
     if target_gen < 3:
         return [], None
 
-    # Usa past_abilities se disponibile (stessa struttura di past_types)
-    raw_abilities = poke.get("abilities", [])
+    # Ricostruisce le abilita per la generazione target.
+    # IMPORTANTE: past_abilities e' un DELTA per slot, non una lista
+    # completa. Ogni entry indica solo gli slot che sono cambiati.
+    # Bisogna fare merge per slot, non sostituzione totale.
+    abilities_by_slot: dict[int, dict] = {}
+    for a in poke.get("abilities", []):
+        abilities_by_slot[a.get("slot", 0)] = a
+
     for pa in poke.get("past_abilities", []):
         gen_name = pa.get("generation", {}).get("name", "")
         gen_num = _GEN_NAME_TO_NUM.get(gen_name, 99)
         if target_gen <= gen_num:
-            raw_abilities = pa.get("abilities", raw_abilities)
+            # Merge: sostituisci solo gli slot specificati
+            for a in pa.get("abilities", []):
+                abilities_by_slot[a.get("slot", 0)] = a
+
+    raw_abilities = list(abilities_by_slot.values())
 
     # Indice rapido slug -> ability data
     ab_by_slug: dict[str, dict] = {}
@@ -303,19 +363,18 @@ def build_pokemon_documents(
     all_types: dict[int, dict],
     generation: int,
     type_table: dict[str, dict[str, float]] | None = None,
+    type_name_it: dict[str, str] | None = None,
     moves_data: dict[int, dict] | None = None,
     abilities_data: dict[int, dict] | None = None,
+    items_data: dict[int, dict] | None = None,
 ) -> list[Document]:
     """Build one Document per Pokemon for the given generation."""
     max_id = MAX_POKEMON_PER_GEN.get(generation, 1025)
     docs = []
 
-    # Build type name lookup (EN -> IT)
-    type_name_it: dict[str, str] = {}
-    for t in all_types.values():
-        en_name = t["name"]
-        it_name = _get_localized(t.get("names", []), "it") or en_name
-        type_name_it[en_name] = it_name
+    # Usa il lookup condiviso o costruiscilo se non fornito
+    if type_name_it is None:
+        type_name_it = _build_type_name_lookup(all_types)
 
     # Build move name lookup (EN slug -> IT name)
     move_name_it: dict[str, str] = {}
@@ -340,6 +399,15 @@ def build_pokemon_documents(
         it_name = _get_localized(sp.get("names", []), "it")
         if slug and it_name:
             species_name_it[slug] = it_name
+
+    # Build item name lookup (EN slug -> IT name) for evolution triggers
+    item_name_it: dict[str, str] = {}
+    if items_data:
+        for it in items_data.values():
+            slug = it["name"]  # e.g. "sun-stone"
+            it_name = _get_localized(it.get("names", []), "it")
+            if it_name:
+                item_name_it[slug] = it_name
 
     # Build type effectiveness table if not provided
     if type_table is None:
@@ -409,10 +477,15 @@ def build_pokemon_documents(
                     species_data,
                     generation,
                     name_lookup=species_name_it,
+                    item_name_lookup=item_name_it,
                 )
 
         # Learnset for this generation (Italian move names)
-        learnset_moves = []
+        # Formato compatto: mosse per livello con "(Lv.X)", mosse MT solo nomi.
+        # Manteniamo TUTTI i nomi (serve per query tipo "Charizard impara Terremoto?")
+        # ma evitiamo di ripetere "(MT)" per ogni mossa.
+        levelup_moves: list[tuple[int, str]] = []
+        mt_moves: list[str] = []
         for m in poke.get("moves", []):
             for vgd in m.get("version_group_details", []):
                 vg_name = vgd["version_group"]["name"]
@@ -425,10 +498,24 @@ def build_pokemon_documents(
                         move_slug, move_slug.replace("-", " ").title()
                     )
                     if method == "level-up" and level > 0:
-                        learnset_moves.append(f"{move_name} (Lv.{level})")
+                        levelup_moves.append((level, f"{move_name} (Lv.{level})"))
                     elif method == "machine":
-                        learnset_moves.append(f"{move_name} (MT)")
+                        mt_moves.append(move_name)
                     break
+        # Ordina mosse per livello
+        levelup_moves.sort(key=lambda x: x[0])
+
+        # Formatta sezione mosse compatta
+        learnset_lines: list[str] = []
+        if levelup_moves:
+            learnset_lines.append(
+                "Per livello: " + ", ".join(t[1] for t in levelup_moves)
+            )
+        if mt_moves:
+            learnset_lines.append(
+                "Via MT/MN: " + ", ".join(sorted(mt_moves))
+            )
+        learnset_text = "\n".join(learnset_lines) if learnset_lines else "Dati non disponibili"
 
         # Height / Weight
         height_m = poke["height"] / 10
@@ -473,7 +560,7 @@ Descrizione Pokedex:
 {flavor}
 
 Mosse apprendibili (Generazione {generation}):
-{', '.join(learnset_moves) if learnset_moves else 'Dati non disponibili'}
+{learnset_text}
 
 Leggendario: {'Si' if is_legendary else 'No'}
 Misterioso: {'Si' if is_mythical else 'No'}"""
@@ -512,11 +599,16 @@ def _reconstruct_move_stats(move: dict, target_gen: int) -> dict:
         "type": move.get("type", {}).get("name"),
         "effect": "",
     }
-    # Effect entries
+    # Effect entries: preferisci italiano, fallback inglese
     for ee in move.get("effect_entries", []):
-        if ee.get("language", {}).get("name") == "en":
+        if ee.get("language", {}).get("name") == "it":
             current["effect"] = ee.get("short_effect", "")
             break
+    if not current["effect"]:
+        for ee in move.get("effect_entries", []):
+            if ee.get("language", {}).get("name") == "en":
+                current["effect"] = ee.get("short_effect", "")
+                break
 
     # Apply past_values: each entry means "before this version group,
     # the move had these values"
@@ -541,15 +633,15 @@ def _reconstruct_move_stats(move: dict, target_gen: int) -> dict:
 
 def build_move_documents(
     moves_data: dict[int, dict],
-    all_types: dict[int, dict],
     generation: int,
+    type_name_it: dict[str, str] | None = None,
+    all_types: dict[int, dict] | None = None,
 ) -> list[Document]:
     """Build one Document per move for the given generation."""
-    type_name_it: dict[str, str] = {}
-    for t in all_types.values():
-        en_name = t["name"]
-        it_name = _get_localized(t.get("names", []), "it") or en_name
-        type_name_it[en_name] = it_name
+    if type_name_it is None and all_types is not None:
+        type_name_it = _build_type_name_lookup(all_types)
+    elif type_name_it is None:
+        type_name_it = {}
 
     docs = []
 
@@ -616,12 +708,7 @@ def _reconstruct_type_matchups(type_data: dict, target_gen: int) -> dict:
 
     for pdr in type_data.get("past_damage_relations", []):
         vg_name = pdr.get("generation", {}).get("name", "")
-        # past_damage_relations uses generation name, not version group
-        gen_num = {
-            "generation-i": 1, "generation-ii": 2, "generation-iii": 3,
-            "generation-iv": 4, "generation-v": 5, "generation-vi": 6,
-            "generation-vii": 7, "generation-viii": 8, "generation-ix": 9,
-        }.get(vg_name, 99)
+        gen_num = _GEN_NAME_TO_NUM.get(vg_name, 99)
 
         if target_gen <= gen_num:
             current = pdr.get("damage_relations", current)
@@ -633,13 +720,11 @@ def _reconstruct_type_matchups(type_data: dict, target_gen: int) -> dict:
 def build_type_documents(
     types_data: dict[int, dict],
     generation: int,
+    type_name_it: dict[str, str] | None = None,
 ) -> list[Document]:
     """Build one Document per type for the given generation."""
-    type_name_it: dict[str, str] = {}
-    for t in types_data.values():
-        en_name = t["name"]
-        it_name = _get_localized(t.get("names", []), "it") or en_name
-        type_name_it[en_name] = it_name
+    if type_name_it is None:
+        type_name_it = _build_type_name_lookup(types_data)
 
     docs = []
 
@@ -870,6 +955,20 @@ Effetto: {effect}"""
 # --- Main builder ---
 
 
+def _build_type_name_lookup(all_types: dict[int, dict]) -> dict[str, str]:
+    """Build shared type name lookup (EN slug -> IT name).
+
+    Costruito una volta sola e riutilizzato da tutti i builder nella
+    stessa generazione, evitando di ricostruirlo N volte.
+    """
+    type_name_it: dict[str, str] = {}
+    for t in all_types.values():
+        en_name = t["name"]
+        it_name = _get_localized(t.get("names", []), "it") or en_name
+        type_name_it[en_name] = it_name
+    return type_name_it
+
+
 def build_all_documents_for_generation(
     all_data: dict,
     generation: int,
@@ -877,7 +976,8 @@ def build_all_documents_for_generation(
     """Build all documents for a specific generation."""
     docs = []
 
-    # Pre-build type effectiveness table for this generation (shared)
+    # Pre-build shared lookups (una volta sola per generazione)
+    type_name_it = _build_type_name_lookup(all_data["types"])
     type_table = _build_type_effectiveness_table(all_data["types"], generation)
 
     docs.extend(build_pokemon_documents(
@@ -887,19 +987,22 @@ def build_all_documents_for_generation(
         all_data["types"],
         generation,
         type_table=type_table,
+        type_name_it=type_name_it,
         moves_data=all_data.get("moves"),
         abilities_data=all_data.get("abilities"),
+        items_data=all_data.get("items"),
     ))
 
     docs.extend(build_move_documents(
         all_data["moves"],
-        all_data["types"],
         generation,
+        type_name_it=type_name_it,
     ))
 
     docs.extend(build_type_documents(
         all_data["types"],
         generation,
+        type_name_it=type_name_it,
     ))
 
     docs.extend(build_ability_documents(

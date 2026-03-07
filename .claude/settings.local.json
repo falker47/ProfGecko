@@ -21,7 +21,27 @@
       "Bash(python diagnose_retrieval.py)",
       "Bash(py diagnose_retrieval.py)",
       "Bash(.venv/Scripts/python.exe diagnose_retrieval.py)",
-      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe diagnose_retrieval.py)"
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe diagnose_retrieval.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe diagnose_data_quality.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe diagnose_abilities.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \":*)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m app.ingestion.run_ingestion)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m app.ingestion.run_ingestion --force)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe verify_fixes.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe check_docs.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe verify_items.py)",
+      "Bash(del \"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\diagnose_retrieval.py\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app/core/rag_chain.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''rag_chain.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app/ingestion/transformers.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''transformers.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app/core/vectorstore.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''vectorstore.py: OK''\\)\")",
+      "Bash(python.exe -c \"import ast; ast.parse\\(open\\(''app/core/rag_chain.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''rag_chain.py: OK''\\)\")",
+      "Bash(python.exe -c \"import ast; ast.parse\\(open\\(''app/ingestion/transformers.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''transformers.py: OK''\\)\")",
+      "Bash(python.exe -c \"import ast; ast.parse\\(open\\(''app/core/vectorstore.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''vectorstore.py: OK''\\)\")",
+      "Bash(/c/Users/Falker/Desktop/Code/ProfGallade/backend/.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\(r''C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\app\\\\core\\\\rag_chain.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''rag_chain.py: OK''\\)\")",
+      "Bash(/c/Users/Falker/Desktop/Code/ProfGallade/backend/.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\(r''C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\app\\\\ingestion\\\\transformers.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''transformers.py: OK''\\)\")",
+      "Bash(/c/Users/Falker/Desktop/Code/ProfGallade/backend/.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\(r''C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\app\\\\core\\\\vectorstore.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''vectorstore.py: OK''\\)\")",
+      "Bash(/c/Users/Falker/Desktop/Code/ProfGallade/backend/.venv/Scripts/python.exe -c \":*)",
+      "Bash(.venv/Scripts/python.exe -c \"import py_compile; py_compile.compile\\(r''app/ingestion/transformers.py'', doraise=True\\); print\\(''OK: transformers.py compiles successfully''\\)\")"
     ]
   }
 }

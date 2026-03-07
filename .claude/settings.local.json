@@ -7,7 +7,21 @@
       "WebFetch(domain:pokemondb.net)",
       "Bash(npx create-next-app@latest frontend --typescript --tailwind --eslint --app --src-dir --no-import-alias --use-npm)",
       "Bash(npm install)",
-      "Bash(.venvScriptspip install langchain-ollama)"
+      "Bash(.venvScriptspip install langchain-ollama)",
+      "Bash(python -c \":*)",
+      "Bash(python3 -c \":*)",
+      "Bash(py -c \":*)",
+      "Bash(grep -l \"fairy\" \"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\data\\\\raw\\\\type_\"*.json)",
+      "Bash(ls -la \"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\data\\\\raw\\\\type_\"*.json)",
+      "Bash(python3:*)",
+      "Bash(dir \"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\data\\\\raw\" /b)",
+      "Bash(findstr /c:\".\")",
+      "Bash(.venvScriptspython.exe -m app.ingestion.run_ingestion --force)",
+      "Bash(.venv/Scripts/python.exe -m app.ingestion.run_ingestion --force)",
+      "Bash(python diagnose_retrieval.py)",
+      "Bash(py diagnose_retrieval.py)",
+      "Bash(.venv/Scripts/python.exe diagnose_retrieval.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe diagnose_retrieval.py)"
     ]
   }
 }

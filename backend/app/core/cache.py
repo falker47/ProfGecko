@@ -304,7 +304,8 @@ class ResponseCache:
         offset = (page - 1) * per_page
         cursor = await self._db.execute(
             f"""SELECT id, question, generation, response, hit_count,
-                       reviewed, created_at, last_hit_at, reviewed_at
+                       reviewed, created_at, last_hit_at, reviewed_at,
+                       exact_hash, normal_hash
                 FROM response_cache {where}
                 ORDER BY hit_count DESC, created_at DESC
                 LIMIT ? OFFSET ?""",
@@ -323,6 +324,8 @@ class ResponseCache:
                 "created_at": r[6],
                 "last_hit_at": r[7],
                 "reviewed_at": r[8],
+                "exact_hash": r[9][:12] + "…",
+                "normal_hash": r[10][:12] + "…",
             }
             for r in rows
         ]
@@ -388,6 +391,56 @@ class ResponseCache:
         await self._db.commit()
         logger.info("Cache entry #%d marked as REVIEWED", entry_id)
         return True
+
+    # ── Debug ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def debug_hash(question: str, generation: int) -> dict:
+        """Show how a question would be hashed (no DB interaction).
+
+        Returns the exact hash, normal hash, and the intermediate
+        normalized tokens so you can verify the pipeline visually.
+        """
+        tokens = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", question.lower())
+
+        # Step 1: ordinals
+        tokens = [_ORDINAL_MAP.get(t, t) for t in tokens]
+        after_ordinals = list(tokens)
+
+        # Step 2: plurals
+        tokens = [_PLURAL_MAP.get(t, t) for t in tokens]
+        after_plurals = list(tokens)
+
+        # Step 3: gen numbers
+        gen_number_indices: set[int] = set()
+        for i, t in enumerate(tokens):
+            if t in _GEN_KEYWORDS:
+                if i > 0 and tokens[i - 1].isdigit():
+                    gen_number_indices.add(i - 1)
+                if i + 1 < len(tokens) and tokens[i + 1].isdigit():
+                    gen_number_indices.add(i + 1)
+
+        # Step 4: filter
+        filtered = sorted(
+            t for i, t in enumerate(tokens)
+            if t not in _STOPWORDS
+            and len(t) >= 2
+            and i not in gen_number_indices
+        )
+
+        return {
+            "question": question,
+            "generation": generation,
+            "exact_hash": _exact_hash(question)[:16],
+            "normal_hash": _normal_hash(question)[:16],
+            "pipeline": {
+                "1_after_ordinals": after_ordinals,
+                "2_after_plurals": after_plurals,
+                "3_gen_numbers_removed": sorted(gen_number_indices),
+                "4_final_tokens": filtered,
+                "5_hash_input": " ".join(filtered),
+            },
+        }
 
     # ── Internal ────────────────────────────────────────────────────
 

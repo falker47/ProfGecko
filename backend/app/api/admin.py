@@ -221,3 +221,24 @@ async def cache_approve_entry(
     if not success:
         raise HTTPException(status_code=404, detail="Entry not found")
     return {"status": "ok", "entry_id": entry_id, "reviewed": True}
+
+
+@router.get("/cache/debug")
+async def cache_debug_hash(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+    question: str = Query(..., description="Question to analyze"),
+    generation: int = Query(9, ge=1, le=9, description="Generation (default 9)"),
+):
+    """Show how a question would be hashed — no DB writes.
+
+    Use this to verify that two different phrasings produce the same
+    normal_hash before testing them in the chatbot.
+
+    Usage:
+        GET /api/admin/cache/debug?secret=...&question=debolezze garchomp gen 5&generation=5
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    return ResponseCache.debug_hash(question, generation)

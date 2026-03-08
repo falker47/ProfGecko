@@ -36,16 +36,25 @@ logger = logging.getLogger(__name__)
 _STOPWORDS: frozenset[str] = frozenset({
     # Italian — articles, prepositions, pronouns, conjunctions
     "il", "lo", "la", "le", "li", "un", "una", "uno", "gli", "dei",
-    "del", "della", "delle", "degli", "nel", "nella", "nelle", "nei",
+    "del", "della", "delle", "degli", "dettagli", "nel", "nella", "nelle", "nei",
     "negli", "sul", "sulla", "sulle", "al", "alla", "alle", "ai",
-    "che", "chi", "per", "con", "tra", "fra", "non", "piu", "di",
-    "come", "cosa", "quali", "quale", "si", "sono", "suo", "sua", "suoi",
-    "sue", "questo", "questa", "quello", "quella", "questi", "queste",
-    "molto", "poco", "troppo", "anche", "ancora",
-    # Italian — common verbs in questions
+    "che", "chi", "per", "con", "tra", "fra", "non", "piu", "più", "di",
+    "come", "cosa", "quali", "quale", "qual", "si", "sono", "suo", "sua",
+    "suoi", "sue", "questo", "questa", "quello", "quella", "questi",
+    "queste", "quanti", "quante", "quanto",
+    "molto", "poco", "troppo", "anche", "ancora", "tanto", "così", "cosi",
+    "su", "nei", "oppure",
+    # Italian — common verbs / filler in questions
     "ha", "hai", "puoi", "può", "fa", "vai", "vorrei", "sapere",
     "parlami", "dimmi", "mostrami", "spiegami", "descrivi", "elenca",
     "confronta", "confronto", "vincerebbe", "scontro", "meglio",
+    "funziona", "funzionano", "impara", "apprende", "possiede",
+    "cos",  # from "cos'è" (tokenized as "cos" + "è")
+    # Italian — generic adjectives / nouns in questions
+    "forte", "buono", "buona", "bene", "male",
+    "info", "informazioni", "effetto",
+    "base", "punti", "catena",  # "stat base", "punti deboli", "catena evolutiva"
+    "vs",  # "Garchomp vs Salamence"
     # Italian — only truly generic Pokemon word
     "pokemon", "pokémon",
     # Generation keywords (number is stripped separately)
@@ -54,7 +63,8 @@ _STOPWORDS: frozenset[str] = frozenset({
     "what", "which", "who", "how", "does", "can", "the", "and",
     "are", "is", "of", "in", "for", "to", "from", "with", "has", "have",
     "its", "their", "this", "that", "about", "tell", "me", "show",
-    "please", "pokemon",
+    "please", "pokemon", "learn", "learns",
+    "effect", "info", "strong", "good", "vs", "details",
 })
 
 # ── Ordinal → digit conversion (IT + EN) ────────────────────────────
@@ -82,25 +92,42 @@ _ORDINAL_MAP: dict[str, str] = {
     "ninth": "9", "9th": "9",
 }
 
-# ── Plural → singular normalization (IT + EN) ───────────────────────
-# Only Pokemon-relevant terms that could appear as both forms.
+# ── Synonym / plural normalization (IT + EN) ─────────────────────────
+# Maps variant forms to a canonical token so different phrasings
+# produce the same hash (e.g. "debole" → "debolezza",
+# "catena evolutiva" → "evoluzione", "stat" → "statistica").
 
 _PLURAL_MAP: dict[str, str] = {
-    # Italian
+    # Italian — plurals
     "debolezze": "debolezza",
     "resistenze": "resistenza",
     "mosse": "mossa",
     "statistiche": "statistica",
     "tipi": "tipo",
-    "evoluzioni": "evoluzione", "evolve": "evoluzione",
-    # English
+    "evoluzioni": "evoluzione",
+    # Italian — adjective/verb → noun synonyms
+    "debole": "debolezza",
+    "deboli": "debolezza",
+    "vulnerabile": "debolezza",
+    "resistente": "resistenza",
+    "evolve": "evoluzione",
+    "evolutiva": "evoluzione",
+    "evolutivo": "evoluzione",
+    # Italian — abbreviations
+    "stat": "statistica",
+    "stats": "statistica",
+    # English — plurals
     "weaknesses": "weakness",
     "resistances": "resistance",
     "moves": "move",
     "types": "type",
     "abilities": "ability",
-    "stats": "stat",
-    "evolutions": "evolution",
+    # English — synonyms (evolution terms → IT canonical "evoluzione")
+    "evolution": "evoluzione",
+    "evolutions": "evoluzione",
+    "evolves": "evoluzione",
+    "weak": "weakness",
+    "moveset": "move",
 }
 
 # ── Generation keyword triggers ─────────────────────────────────────

@@ -391,21 +391,20 @@ class RAGChain:
         On cache miss: streams from LLM, collects the full response,
         stores it in cache, and sets ``self._last_cache_hit = False``.
 
-        Follow-up questions (short questions with chat history) bypass
-        the cache because their meaning depends on conversation context.
+        Cache LOOKUP always runs (even for short follow-ups) because
+        if a question matches a cached entry, it's inherently standalone.
+        Cache STORAGE only happens for standalone questions (>= 6 words
+        or no history) to avoid caching context-dependent answers.
         """
         self._last_cache_hit = False
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
 
-        # Only cache standalone questions (not follow-ups)
-        is_standalone = (
-            not history_list
-            or len(question.split()) >= _SELF_CONTAINED_WORD_COUNT
-        )
-
-        # Try cache lookup
-        if cache and is_standalone:
+        # Always try cache lookup — if a question matches a cached
+        # response, it's inherently standalone (it was cached before).
+        # Short questions like "garchomp debolezze gen 4" (4 words)
+        # should still hit cache even with chat history.
+        if cache:
             cached = await cache.get(question, generation)
             if cached is not None:
                 self._last_cache_hit = True
@@ -418,7 +417,12 @@ class RAGChain:
             full_response.append(chunk)
             yield chunk
 
-        # Store in cache (only standalone questions with non-empty response)
+        # Only STORE standalone questions (not follow-ups like "e le mosse?")
+        # to avoid caching context-dependent answers.
+        is_standalone = (
+            not history_list
+            or len(question.split()) >= _SELF_CONTAINED_WORD_COUNT
+        )
         response_text = "".join(full_response)
         if cache and is_standalone and response_text.strip():
             await cache.put(question, generation, response_text)

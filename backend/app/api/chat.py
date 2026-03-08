@@ -3,6 +3,7 @@ import json
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
+from app.auth.dependencies import get_current_user_optional
 from app.core.cache import ResponseCache
 from app.core.rag_chain import RAGChain
 from app.credits.dependencies import check_and_deduct_credit
@@ -35,6 +36,7 @@ async def chat_stream(
     request: Request,
     body: ChatRequest,
     credit_info: dict | None = Depends(check_and_deduct_credit),
+    user: dict | None = Depends(get_current_user_optional),
 ):
     """SSE streaming: sends tokens as they are generated.
 
@@ -60,18 +62,14 @@ async def chat_stream(
         # If cache hit, refund the credit that was pre-deducted
         was_cache_hit = getattr(rag_chain, "_last_cache_hit", False)
         final_credits = credit_info
-        if was_cache_hit and credit_info and request.app.state.db:
-            # Refund: we need to undo the deduction
-            from app.auth.dependencies import get_current_user_optional
-            user = await get_current_user_optional(request)
-            if user:
-                db = request.app.state.db
-                from app.config import get_settings
-                settings = get_settings()
-                await db.refund_last_deduction(user["id"])
-                final_credits = await db.get_credit_balance(
-                    user["id"], settings.daily_free_credits
-                )
+        if was_cache_hit and credit_info and user and request.app.state.db:
+            from app.config import get_settings
+            settings = get_settings()
+            db = request.app.state.db
+            await db.refund_last_deduction(user["id"])
+            final_credits = await db.get_credit_balance(
+                user["id"], settings.daily_free_credits
+            )
 
         yield {
             "event": "done",

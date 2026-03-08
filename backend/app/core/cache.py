@@ -5,9 +5,15 @@ Level 1 — exact hash:
     Catches identical questions with different casing/spacing.
 
 Level 2 — normalized hash:
-    lowercase + remove stopwords (IT/EN) + sort tokens → SHA-256
-    Catches reworded questions like "debolezze garchomp gen 5"
-    vs "gen 5 le debolezze di garchomp quali sono".
+    1. Lowercase + tokenize
+    2. Convert ordinals to digits (quinta → 5, fifth → 5)
+    3. Normalize plurals to singular (debolezze → debolezza)
+    4. Strip generation references (gen keyword + adjacent number)
+       since generation is already a separate DB column
+    5. Remove generic stopwords (articles, prepositions, pronouns)
+       but KEEP semantically important Pokemon terms (debolezza,
+       mossa, tipo, etc.) to avoid false positives
+    6. Sort remaining tokens → SHA-256
 
 Both levels include the detected generation as a hard key,
 so "debolezze Garchomp gen 5" never matches "debolezze Garchomp gen 8".
@@ -21,31 +27,86 @@ import aiosqlite
 
 logger = logging.getLogger(__name__)
 
-# ── Stopwords (IT + EN) — removed before normalized hash ────────────
+# ── Stopwords — ONLY generic words, NOT Pokemon-specific terms ──────
+# Pokemon terms (debolezza, mossa, tipo, abilita, etc.) are
+# semantically important and MUST stay in the hash to prevent
+# false positives (e.g. "mosse garchomp" ≠ "debolezze garchomp").
 
 _STOPWORDS: frozenset[str] = frozenset({
-    # Italian
-    "che", "chi", "per", "con", "del", "della", "delle", "dei", "degli",
-    "nel", "nella", "nelle", "nei", "negli", "sul", "sulla", "sulle",
-    "come", "cosa", "quali", "quale", "sono", "una", "uno", "gli", "non",
-    "tra", "fra", "piu", "suo", "sua", "suoi", "sue", "questo", "questa",
-    "quello", "quella", "molto", "poco", "troppo", "anche", "ancora",
+    # Italian — articles, prepositions, pronouns, conjunctions
+    "il", "lo", "la", "le", "li", "un", "una", "uno", "gli", "dei",
+    "del", "della", "delle", "degli", "nel", "nella", "nelle", "nei",
+    "negli", "sul", "sulla", "sulle", "al", "alla", "alle", "ai",
+    "che", "chi", "per", "con", "tra", "fra", "non", "piu",
+    "come", "cosa", "quali", "quale", "sono", "suo", "sua", "suoi",
+    "sue", "questo", "questa", "quello", "quella",
+    "molto", "poco", "troppo", "anche", "ancora",
+    # Italian — common verbs in questions
+    "ha", "hai", "puoi", "può", "fa", "vai", "vorrei", "sapere",
     "parlami", "dimmi", "mostrami", "spiegami", "descrivi", "elenca",
     "confronta", "confronto", "vincerebbe", "scontro", "meglio",
-    "impara", "apprende", "evolve", "hai", "puoi", "vorrei", "sapere",
-    "pokemon", "pokémon", "tipo", "tipi", "mossa", "mosse",
-    "abilita", "stat", "statistiche", "generazione", "gen",
-    "debolezze", "debolezza", "resistenze", "resistenza", "immunita",
-    "catena", "evolutiva", "evoluzione", "base", "totale",
-    # English
+    # Italian — only truly generic Pokemon word
+    "pokemon", "pokémon",
+    # Generation keywords (number is stripped separately)
+    "gen", "generazione", "generation",
+    # English — articles, prepositions, pronouns, conjunctions
     "what", "which", "who", "how", "does", "can", "the", "and",
     "are", "is", "of", "in", "for", "to", "from", "with", "has", "have",
     "its", "their", "this", "that", "about", "tell", "me", "show",
-    "please", "pokemon", "type", "types", "move", "moves",
-    "ability", "abilities", "stats", "statistics", "generation",
-    "weakness", "weaknesses", "resistance", "resistances", "immunity",
-    "evolution", "chain", "base", "total",
+    "please", "pokemon",
 })
+
+# ── Ordinal → digit conversion (IT + EN) ────────────────────────────
+
+_ORDINAL_MAP: dict[str, str] = {
+    # Italian (masc + fem)
+    "prima": "1", "primo": "1",
+    "seconda": "2", "secondo": "2",
+    "terza": "3", "terzo": "3",
+    "quarta": "4", "quarto": "4",
+    "quinta": "5", "quinto": "5",
+    "sesta": "6", "sesto": "6",
+    "settima": "7", "settimo": "7",
+    "ottava": "8", "ottavo": "8",
+    "nona": "9", "nono": "9",
+    # English
+    "first": "1",
+    "second": "2",
+    "third": "3",
+    "fourth": "4",
+    "fifth": "5",
+    "sixth": "6",
+    "seventh": "7",
+    "eighth": "8",
+    "ninth": "9",
+}
+
+# ── Plural → singular normalization (IT + EN) ───────────────────────
+# Only Pokemon-relevant terms that could appear as both forms.
+
+_PLURAL_MAP: dict[str, str] = {
+    # Italian
+    "debolezze": "debolezza",
+    "resistenze": "resistenza",
+    "mosse": "mossa",
+    "statistiche": "statistica",
+    "tipi": "tipo",
+    "evoluzioni": "evoluzione",
+    # English
+    "weaknesses": "weakness",
+    "resistances": "resistance",
+    "moves": "move",
+    "types": "type",
+    "abilities": "ability",
+    "stats": "stat",
+    "evolutions": "evolution",
+}
+
+# ── Generation keyword triggers ─────────────────────────────────────
+# When one of these appears adjacent to a number, the number is
+# stripped from the hash (generation is a separate DB column).
+
+_GEN_KEYWORDS = frozenset({"gen", "generazione", "generation"})
 
 
 # ── Hash functions ──────────────────────────────────────────────────
@@ -57,9 +118,35 @@ def _exact_hash(question: str) -> str:
 
 
 def _normal_hash(question: str) -> str:
-    """Level 2: remove stopwords + sort remaining tokens → SHA-256."""
+    """Level 2: normalize + strip gen refs + remove stopwords + sort → SHA-256."""
     tokens = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", question.lower())
-    filtered = sorted(t for t in tokens if t not in _STOPWORDS and len(t) >= 2)
+
+    # Step 1: ordinals → digits  (quinta → 5, fifth → 5)
+    tokens = [_ORDINAL_MAP.get(t, t) for t in tokens]
+
+    # Step 2: plurals → singulars (debolezze → debolezza)
+    tokens = [_PLURAL_MAP.get(t, t) for t in tokens]
+
+    # Step 3: find generation-adjacent numbers and mark for removal.
+    # Generation is already stored as a separate column, so the
+    # number in the question (e.g. "gen 5", "quinta generazione")
+    # must NOT appear in the hash.
+    gen_number_indices: set[int] = set()
+    for i, t in enumerate(tokens):
+        if t in _GEN_KEYWORDS:
+            if i > 0 and tokens[i - 1].isdigit():
+                gen_number_indices.add(i - 1)
+            if i + 1 < len(tokens) and tokens[i + 1].isdigit():
+                gen_number_indices.add(i + 1)
+
+    # Step 4: filter stopwords, short tokens, gen-adjacent numbers
+    filtered = sorted(
+        t for i, t in enumerate(tokens)
+        if t not in _STOPWORDS
+        and len(t) >= 2
+        and i not in gen_number_indices
+    )
+
     key = " ".join(filtered)
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 

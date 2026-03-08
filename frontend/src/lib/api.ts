@@ -1,27 +1,46 @@
 import { API_BASE_URL, MAX_HISTORY_MESSAGES } from "./constants";
-import type { Message } from "./types";
+import type { CreditBalance, Message } from "./types";
 
-export async function streamChat(
-  message: string,
-  history: Message[],
-  onToken: (token: string) => void,
-  onDone: (generationUsed?: number) => void,
-  onError: (error: string) => void,
-): Promise<void> {
+export interface StreamChatOptions {
+  message: string;
+  history: Message[];
+  authToken?: string | null;
+  onToken: (token: string) => void;
+  onDone: (generationUsed?: number) => void;
+  onError: (error: string) => void;
+  onCreditsExhausted?: () => void;
+}
+
+export async function streamChat(opts: StreamChatOptions): Promise<void> {
+  const { message, history, authToken, onToken, onDone, onError, onCreditsExhausted } = opts;
+
   const chatHistory = history.slice(-MAX_HISTORY_MESSAGES).map((m) => ({
     role: m.role,
     content: m.content,
   }));
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ message, chat_history: chatHistory }),
     });
   } catch {
     onError("Impossibile connettersi al server. Verifica che il backend sia avviato.");
+    return;
+  }
+
+  if (response.status === 402) {
+    onCreditsExhausted?.();
+    onError("Hai esaurito i crediti! I crediti gratuiti si resettano a mezzanotte.");
     return;
   }
 
@@ -66,6 +85,14 @@ export async function streamChat(
             if ("token" in data) {
               onToken(data.token);
             } else if ("generation_used" in data) {
+              // Dispatch credit update if present
+              if (data.credits) {
+                window.dispatchEvent(
+                  new CustomEvent<CreditBalance>("credits-updated", {
+                    detail: data.credits,
+                  }),
+                );
+              }
               onDone(data.generation_used);
               return;
             }

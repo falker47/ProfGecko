@@ -325,30 +325,38 @@ def _calculate_type_effectiveness(
             multiplier *= type_table.get(atk_type, {}).get(def_type, 1.0)
         combined[atk_type] = multiplier
 
-    # Group by multiplier
-    groups: dict[float, list[str]] = {}
+    # Formato per-tipo: ogni tipo ha il moltiplicatore accanto.
+    # Questo impedisce all'LLM di invertire i valori tra tipi diversi.
+    weaknesses: list[tuple[float, str]] = []
+    resistances: list[tuple[float, str]] = []
+    immunities: list[str] = []
+
     for atk_type, mult in combined.items():
         if mult == 1.0:
-            continue  # Skip neutral — not interesting
+            continue
         it_name = type_name_it.get(atk_type, atk_type)
-        groups.setdefault(mult, []).append(it_name)
+        if mult > 1.0:
+            weaknesses.append((mult, it_name))
+        elif mult == 0.0:
+            immunities.append(it_name)
+        else:
+            resistances.append((mult, it_name))
+
+    # Ordina: debolezze decrescenti, resistenze crescenti
+    weaknesses.sort(key=lambda x: (-x[0], x[1]))
+    resistances.sort(key=lambda x: (x[0], x[1]))
 
     lines = []
-
-    # Weaknesses (descending)
-    for mult in sorted([m for m in groups if m > 1.0], reverse=True):
-        types_str = ", ".join(sorted(groups[mult]))
-        lines.append(f"Debolezze (x{mult:g}): {types_str}")
-
-    # Resistances (ascending)
-    for mult in sorted([m for m in groups if 0 < m < 1.0]):
-        types_str = ", ".join(sorted(groups[mult]))
-        lines.append(f"Resistenze (x{mult:g}): {types_str}")
-
-    # Immunities
-    if 0.0 in groups:
-        types_str = ", ".join(sorted(groups[0.0]))
-        lines.append(f"Immunita (x0): {types_str}")
+    if weaknesses:
+        lines.append("Debolezze: " + ", ".join(
+            f"{name} x{mult:g}" for mult, name in weaknesses
+        ))
+    if resistances:
+        lines.append("Resistenze: " + ", ".join(
+            f"{name} x{mult:g}" for mult, name in resistances
+        ))
+    if immunities:
+        lines.append("Immunita: " + ", ".join(sorted(immunities)))
 
     return "\n".join(lines) if lines else "Nessuna debolezza o resistenza particolare"
 

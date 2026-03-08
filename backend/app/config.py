@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # Auth
+    google_client_id: str = ""
+    jwt_secret: str = "change-me-in-production"
+    jwt_expiry_hours: int = 168  # 7 days
+
+    # Database
+    db_path: str = "data/profgallade.db"
+
+    # Credits
+    daily_free_credits: int = 10
+    anonymous_session_limit: int = 3
+
     # App
     app_debug: bool = False
 

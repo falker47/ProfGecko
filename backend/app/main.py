@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.config import get_settings
 from app.core.embeddings import get_embeddings
+from app.db.database import Database
 from app.core.llm import get_llm
 from app.core.rag_chain import RAGChain
 from app.core.vectorstore import get_vectorstore
@@ -51,7 +52,16 @@ async def lifespan(app: FastAPI):
         k=settings.retriever_k,
     )
 
+    # Initialize user database
+    db = Database(settings.db_path)
+    await db.connect()
+    app.state.db = db
+    app.state.jwt_secret = settings.jwt_secret
+
     yield
+
+    # Cleanup
+    await db.close()
 
 
 def create_app() -> FastAPI:

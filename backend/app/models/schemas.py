@@ -19,3 +19,30 @@ class ChatResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     documents_count: int
+
+
+# --- Auth & Credits ---
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
+class UserInfo(BaseModel):
+    id: str
+    name: str
+    email: str
+    picture_url: str
+
+
+class CreditBalance(BaseModel):
+    daily_free_remaining: int
+    daily_free_total: int
+    paid_credits: int
+    total_available: int
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    user: UserInfo
+    credits: CreditBalance

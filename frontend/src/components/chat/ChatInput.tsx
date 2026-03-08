@@ -5,9 +5,10 @@ import { useRef, useState } from "react";
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled: boolean;
+  placeholder?: string;
 }
 
-export default function ChatInput({ onSend, disabled }: ChatInputProps) {
+export default function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -45,7 +46,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
-          placeholder="Chiedi qualcosa al Prof. Gallade..."
+          placeholder={placeholder || "Chiedi qualcosa al Prof. Gallade..."}
           disabled={disabled}
           rows={1}
           className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"

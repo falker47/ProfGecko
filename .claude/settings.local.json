@@ -41,7 +41,27 @@
       "Bash(/c/Users/Falker/Desktop/Code/ProfGallade/backend/.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\(r''C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\app\\\\ingestion\\\\transformers.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''transformers.py: OK''\\)\")",
       "Bash(/c/Users/Falker/Desktop/Code/ProfGallade/backend/.venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\(r''C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\app\\\\core\\\\vectorstore.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''vectorstore.py: OK''\\)\")",
       "Bash(/c/Users/Falker/Desktop/Code/ProfGallade/backend/.venv/Scripts/python.exe -c \":*)",
-      "Bash(.venv/Scripts/python.exe -c \"import py_compile; py_compile.compile\\(r''app/ingestion/transformers.py'', doraise=True\\); print\\(''OK: transformers.py compiles successfully''\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"import py_compile; py_compile.compile\\(r''app/ingestion/transformers.py'', doraise=True\\); print\\(''OK: transformers.py compiles successfully''\\)\")",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(curl -s http://localhost:8000/docs)",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -H \"Content-Type: application/json\" -d '{\"\"message\"\": \"\"che tipo è Pikachu?\"\", \"\"history\"\": []}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -H \"Content-Type: application/json\" -d \"{\"\"message\"\": \"\"che tipo è Pikachu?\"\", \"\"chat_history\"\": []}\")",
+      "Bash(.venv/Scripts/python.exe -c \":*)",
+      "Bash(xargs grep -l \"database\\\\|auth\\\\|user\\\\|session\\\\|token\")",
+      "Bash(.venv/Scripts/pip.exe install google-auth PyJWT aiosqlite --quiet)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(python -c \"import secrets; print\\(secrets.token_urlsafe\\(48\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\(''crypto''\\).randomBytes\\(48\\).toString\\(''base64url''\\)\\)\")",
+      "Bash(pip install aiosqlite google-auth PyJWT)",
+      "Bash(pip3 install aiosqlite google-auth PyJWT)",
+      "Bash(py -m pip install aiosqlite google-auth PyJWT)",
+      "Bash(py -c \"from app.main import app; print\\(''Backend imports OK''\\)\")",
+      "Bash(\"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" -m pip install aiosqlite google-auth PyJWT)",
+      "Bash(\"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" -c \"from app.main import app; print\\(''Backend imports OK''\\)\")",
+      "Bash(\"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" -c \":*)",
+      "Bash(npx next build)",
+      "Bash(\"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" -c \"import langchain_google_genai; print\\(''langchain-google-genai OK, version:'', langchain_google_genai.__version__\\)\")",
+      "Bash(\"C:\\\\Users\\\\Falker\\\\Desktop\\\\Code\\\\ProfGallade\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" -c \"from langchain_google_genai import ChatGoogleGenerativeAI; print\\(''ChatGoogleGenerativeAI importato OK''\\)\")"
     ]
   }
 }

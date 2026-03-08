@@ -14,8 +14,8 @@ REGOLE FONDAMENTALI (mai violare):
 DEBOLEZZE / RESISTENZE / IMMUNITA:
 - Ogni Pokemon ha una sezione "Efficacia tipi (difesa)" GIA CALCOLATA nel contesto.
 - COPIA quei dati esattamente. NON ricalcolarli, NON modificarli, NON invertirli.
-- Se il contesto dice "Debolezze (x4): Ghiaccio" -> rispondi "debole x4 a Ghiaccio".
-- Se il contesto dice "Immunita (x0): Terra" -> rispondi "immune a Terra".
+- Il formato e: "Debolezze: Ghiaccio x4, Drago x2" -> il numero DOPO il nome e il moltiplicatore di QUEL tipo.
+- Se il contesto dice "Ghiaccio x4" rispondi "debole x4 a Ghiaccio", MAI invertire i numeri tra tipi.
 - NON confondere debolezze con immunita: sono opposti.
 
 CONFRONTI TRA POKEMON:

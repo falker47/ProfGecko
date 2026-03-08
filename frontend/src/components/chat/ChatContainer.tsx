@@ -1,12 +1,30 @@
 "use client";
 
+import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/hooks/useChat";
+import LoginPrompt from "../auth/LoginPrompt";
+import CreditsExhausted from "../credits/CreditsExhausted";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
 import TypingIndicator from "./TypingIndicator";
 
 export default function ChatContainer() {
-  const { messages, isLoading, error, sendMessage, clearChat } = useChat();
+  const { user, token, credits } = useAuth();
+  const {
+    messages,
+    isLoading,
+    error,
+    creditsExhausted,
+    showLoginPrompt,
+    sendMessage,
+    clearChat,
+  } = useChat(token);
+
+  // Show credits exhausted banner if:
+  // - backend returned 402, OR
+  // - user is logged in and credits are at 0
+  const isOutOfCredits =
+    creditsExhausted || (!!user && credits !== null && credits.total_available <= 0);
 
   return (
     <div className="flex h-full flex-col">
@@ -20,7 +38,15 @@ export default function ChatContainer() {
         </div>
       )}
 
-      <ChatInput onSend={sendMessage} disabled={isLoading} />
+      {isOutOfCredits && <CreditsExhausted />}
+
+      {showLoginPrompt && !user && <LoginPrompt />}
+
+      <ChatInput
+        onSend={sendMessage}
+        disabled={isLoading || isOutOfCredits}
+        placeholder={isOutOfCredits ? "Crediti esauriti..." : undefined}
+      />
     </div>
   );
 }

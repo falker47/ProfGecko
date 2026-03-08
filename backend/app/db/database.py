@@ -130,6 +130,33 @@ class Database:
         )
         await self._conn.commit()
 
+    async def refund_last_deduction(self, user_id: str) -> None:
+        """Refund the most recent deduction (used on cache hits).
+
+        Deletes the last deduction transaction and restores paid_credits
+        if it was a paid deduction.
+        """
+        row = await self._fetchone(
+            """SELECT id, type FROM credit_transactions
+               WHERE user_id = ? AND amount = -1
+               ORDER BY created_at DESC LIMIT 1""",
+            (user_id,),
+        )
+        if not row:
+            return
+
+        if row["type"] == "paid_deduction":
+            await self._conn.execute(
+                "UPDATE users SET paid_credits = paid_credits + 1 WHERE id = ?",
+                (user_id,),
+            )
+
+        await self._conn.execute(
+            "DELETE FROM credit_transactions WHERE id = ?",
+            (row["id"],),
+        )
+        await self._conn.commit()
+
     async def add_purchased_credits(
         self,
         user_id: str,

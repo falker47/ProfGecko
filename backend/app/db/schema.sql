@@ -22,3 +22,23 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
 CREATE INDEX IF NOT EXISTS idx_tx_user ON credit_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_tx_date ON credit_transactions(created_at);
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+
+-- Response cache: stores LLM responses keyed by normalized question hash.
+-- Two levels of matching:
+--   Level 1: exact_hash   = SHA-256 of lowercase + stripped question
+--   Level 2: normal_hash  = SHA-256 of stopword-removed + sorted tokens
+-- Both levels match IT and EN questions independently.
+CREATE TABLE IF NOT EXISTS response_cache (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    exact_hash      TEXT NOT NULL,
+    normal_hash     TEXT NOT NULL,
+    question        TEXT NOT NULL,
+    generation      INTEGER NOT NULL,
+    response        TEXT NOT NULL,
+    hit_count       INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    last_hit_at     TEXT DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_cache_exact ON response_cache(exact_hash, generation);
+CREATE INDEX IF NOT EXISTS idx_cache_normal ON response_cache(normal_hash, generation);

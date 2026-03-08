@@ -1,10 +1,10 @@
-"""Admin endpoints — ingestion trigger (protected by JWT_SECRET)."""
-
-import asyncio
+"""Admin endpoints — ingestion + cache management (protected by JWT_SECRET)."""
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+from app.core.cache import ResponseCache
+
+router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.post("/ingest")
@@ -83,3 +83,64 @@ async def trigger_ingestion(
         "status": "completed",
         "documents_indexed": len(all_docs),
     }
+
+
+def _get_cache(request: Request) -> ResponseCache:
+    cache: ResponseCache | None = getattr(request.app.state, "cache", None)
+    if cache is None:
+        raise HTTPException(status_code=503, detail="Cache not initialized")
+    return cache
+
+
+@router.get("/cache/stats")
+async def cache_stats(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Return cache statistics (total entries, total hits).
+
+    Usage:
+        GET /api/admin/cache/stats?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    return await cache.stats()
+
+
+@router.post("/cache/invalidate")
+async def cache_invalidate(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Clear the entire response cache.
+
+    Usage:
+        POST /api/admin/cache/invalidate?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    deleted = await cache.invalidate_all()
+    return {"status": "ok", "entries_deleted": deleted}
+
+
+@router.post("/cache/cleanup")
+async def cache_cleanup(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+    max_age_days: int = Query(90, description="Remove entries older than N days"),
+):
+    """Remove stale cache entries that haven't been hit recently.
+
+    Usage:
+        POST /api/admin/cache/cleanup?secret=YOUR_JWT_SECRET&max_age_days=90
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    deleted = await cache.cleanup(max_age_days=max_age_days)
+    return {"status": "ok", "stale_entries_removed": deleted}

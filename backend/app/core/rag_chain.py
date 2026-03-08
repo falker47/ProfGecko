@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
+from app.core.cache import ResponseCache
 from app.core.generation_mapper import LATEST_GENERATION, detect_generation
 from app.core.prompts import PROF_GALLADE_SYSTEM_PROMPT
 
@@ -376,3 +377,48 @@ class RAGChain:
             "chat_history": history,
         }):
             yield chunk
+
+    async def astream_cached(
+        self,
+        question: str,
+        chat_history: list[dict] | None = None,
+        cache: ResponseCache | None = None,
+    ):
+        """Stream with cache support.
+
+        On cache hit: yields the cached response in a single chunk
+        and sets ``self._last_cache_hit = True``.
+        On cache miss: streams from LLM, collects the full response,
+        stores it in cache, and sets ``self._last_cache_hit = False``.
+
+        Follow-up questions (short questions with chat history) bypass
+        the cache because their meaning depends on conversation context.
+        """
+        self._last_cache_hit = False
+        history_list = chat_history or []
+        generation = self._detect_generation_with_history(question, history_list)
+
+        # Only cache standalone questions (not follow-ups)
+        is_standalone = (
+            not history_list
+            or len(question.split()) >= _SELF_CONTAINED_WORD_COUNT
+        )
+
+        # Try cache lookup
+        if cache and is_standalone:
+            cached = await cache.get(question, generation)
+            if cached is not None:
+                self._last_cache_hit = True
+                yield cached
+                return
+
+        # Cache miss — stream from LLM
+        full_response: list[str] = []
+        async for chunk in self.astream(question, chat_history):
+            full_response.append(chunk)
+            yield chunk
+
+        # Store in cache (only standalone questions with non-empty response)
+        response_text = "".join(full_response)
+        if cache and is_standalone and response_text.strip():
+            await cache.put(question, generation, response_text)

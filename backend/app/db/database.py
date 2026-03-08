@@ -27,6 +27,20 @@ class Database:
         schema_path = Path(__file__).parent / "schema.sql"
         schema_sql = schema_path.read_text(encoding="utf-8")
         await self._conn.executescript(schema_sql)
+        await self._run_migrations()
+
+    async def _run_migrations(self) -> None:
+        """Add columns that may be missing from older schemas."""
+        migrations = [
+            "ALTER TABLE response_cache ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE response_cache ADD COLUMN reviewed_at TEXT DEFAULT NULL",
+        ]
+        for sql in migrations:
+            try:
+                await self._conn.execute(sql)
+            except Exception:
+                pass  # Column already exists
+        await self._conn.commit()
 
     async def close(self) -> None:
         if self._conn:

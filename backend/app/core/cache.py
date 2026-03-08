@@ -113,8 +113,10 @@ _GEN_KEYWORDS = frozenset({"gen", "generazione", "generation"})
 # Game titles are stripped because the generation is already stored
 # as a separate DB column. This way "garchomp debolezze platino"
 # matches "garchomp debolezze gen 4" (both → gen=4, hash=same tokens).
-# Excluded: fuoco/foglia (overlap with fire/grass type terms),
-# pikachu/eevee/arceus (Pokemon names in game titles).
+# Excluded from this set: words that overlap with Pokemon type/move
+# terms (fuoco, fire, leaf, green) — these are handled conditionally
+# via _CONDITIONAL_GAME_TOKENS below.
+# Also excluded: pikachu/eevee/arceus (Pokemon names in game titles).
 
 _GAME_TITLE_STOPWORDS: frozenset[str] = frozenset({
     # Gen 1
@@ -140,6 +142,38 @@ _GAME_TITLE_STOPWORDS: frozenset[str] = frozenset({
     # Gen 9
     "scarlatto", "violetto", "scarlet", "violet",
 })
+
+# ── Conditional game title tokens ─────────────────────────────────
+# Words that are part of a game title BUT also have independent
+# Pokemon meaning (type/move terms). They are stripped only when
+# adjacent to their companion word from the game title.
+# E.g. "fuoco" stays in "tipo fuoco" but is stripped in "rosso fuoco".
+
+_CONDITIONAL_GAME_TOKENS: dict[str, frozenset[str]] = {
+    # "rosso fuoco" / "verde foglia" (IT gen 3)
+    "fuoco": frozenset({"rosso"}),
+    # "fire red" / "leaf green" (EN gen 3)
+    "fire": frozenset({"red"}),
+    "leaf": frozenset({"green"}),
+    "green": frozenset({"leaf"}),
+}
+
+
+def _find_conditional_indices(tokens: list[str]) -> set[int]:
+    """Find token indices that should be stripped conditionally.
+
+    A token is stripped only when adjacent to its companion word
+    from a multi-word game title (e.g. "fuoco" next to "rosso").
+    """
+    indices: set[int] = set()
+    for i, t in enumerate(tokens):
+        triggers = _CONDITIONAL_GAME_TOKENS.get(t)
+        if triggers:
+            prev_match = i > 0 and tokens[i - 1] in triggers
+            next_match = i + 1 < len(tokens) and tokens[i + 1] in triggers
+            if prev_match or next_match:
+                indices.add(i)
+    return indices
 
 
 # ── Hash functions ──────────────────────────────────────────────────
@@ -188,13 +222,18 @@ def _normal_hash(question: str) -> str:
             if i + 1 < len(tokens) and tokens[i + 1].isdigit():
                 gen_number_indices.add(i + 1)
 
-    # Step 4: filter stopwords, game titles, short tokens, gen-adjacent numbers
+    # Step 3c: conditional game title tokens — strip words only when
+    # adjacent to their companion (e.g. "fuoco" only next to "rosso").
+    conditional_indices = _find_conditional_indices(tokens)
+
+    # Step 4: filter stopwords, game titles, conditional, short tokens, gen-numbers
     filtered = sorted(
         t for i, t in enumerate(tokens)
         if t not in _STOPWORDS
         and t not in _GAME_TITLE_STOPWORDS
         and len(t) >= 2
         and i not in gen_number_indices
+        and i not in conditional_indices
     )
 
     key = " ".join(filtered)
@@ -553,6 +592,9 @@ class ResponseCache:
                 if i + 1 < len(tokens) and tokens[i + 1].isdigit():
                     gen_number_indices.add(i + 1)
 
+        # Step 3c: conditional game title tokens
+        conditional_indices = _find_conditional_indices(tokens)
+
         # Step 4: filter
         filtered = sorted(
             t for i, t in enumerate(tokens)
@@ -560,11 +602,15 @@ class ResponseCache:
             and t not in _GAME_TITLE_STOPWORDS
             and len(t) >= 2
             and i not in gen_number_indices
+            and i not in conditional_indices
         )
 
-        # Identify game title tokens for debug output
+        # Identify removed tokens for debug output
         game_titles_found = [
             t for t in tokens if t in _GAME_TITLE_STOPWORDS
+        ]
+        conditional_found = [
+            tokens[i] for i in sorted(conditional_indices)
         ]
 
         return {
@@ -578,6 +624,7 @@ class ResponseCache:
                 "2_after_plurals": after_plurals,
                 "3_gen_numbers_removed": sorted(gen_number_indices),
                 "3b_game_titles_removed": game_titles_found,
+                "3c_conditional_removed": conditional_found,
                 "4_final_tokens": filtered,
                 "5_hash_input": " ".join(filtered),
             },

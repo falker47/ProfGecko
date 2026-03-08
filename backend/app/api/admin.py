@@ -1,6 +1,11 @@
 """Admin endpoints — ingestion + cache management (protected by JWT_SECRET)."""
 
+import csv
+import io
+from pathlib import Path as FilePath
+
 from fastapi import APIRouter, Body, HTTPException, Path, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.core.cache import ResponseCache
@@ -242,3 +247,73 @@ async def cache_debug_hash(
         raise HTTPException(status_code=403, detail="Invalid secret")
 
     return ResponseCache.debug_hash(question, generation)
+
+
+@router.get("/cache/export")
+async def cache_export_csv(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Export all cache entries as a CSV file (opens in Excel / Google Sheets).
+
+    Usage:
+        GET /api/admin/cache/export?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    rows = await cache.export_all()
+
+    # Build CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "id", "question", "generation", "response",
+        "hit_count", "reviewed", "exact_hash", "normal_hash",
+        "created_at", "last_hit_at", "reviewed_at",
+    ])
+    for row in rows:
+        writer.writerow([
+            row["id"], row["question"], row["generation"], row["response"],
+            row["hit_count"], row["reviewed"], row["exact_hash"],
+            row["normal_hash"], row["created_at"], row["last_hit_at"],
+            row["reviewed_at"],
+        ])
+
+    csv_bytes = output.getvalue().encode("utf-8-sig")  # BOM for Excel
+    return StreamingResponse(
+        io.BytesIO(csv_bytes),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=cache_entries.csv"},
+    )
+
+
+@router.get("/db/download")
+async def download_database(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Download the full SQLite database file.
+
+    Open it with DB Browser for SQLite (https://sqlitebrowser.org/).
+
+    Usage:
+        GET /api/admin/db/download?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    from app.config import get_settings
+
+    db_path = FilePath(get_settings().db_path)
+    if not db_path.exists():
+        raise HTTPException(status_code=404, detail="Database file not found")
+
+    return StreamingResponse(
+        open(db_path, "rb"),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename={db_path.name}",
+        },
+    )

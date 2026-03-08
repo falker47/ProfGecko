@@ -408,6 +408,35 @@ class ResponseCache:
         logger.info("Cache entry #%d marked as REVIEWED", entry_id)
         return True
 
+    # ── Export ────────────────────────────────────────────────────
+
+    async def export_all(self) -> list[dict]:
+        """Export all cache entries as a list of dicts (for CSV export)."""
+        cursor = await self._db.execute(
+            """SELECT id, question, generation, response, hit_count,
+                      reviewed, exact_hash, normal_hash,
+                      created_at, last_hit_at, reviewed_at
+               FROM response_cache
+               ORDER BY id"""
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": r[0],
+                "question": r[1],
+                "generation": r[2],
+                "response": r[3],
+                "hit_count": r[4],
+                "reviewed": r[5],
+                "exact_hash": r[6],
+                "normal_hash": r[7],
+                "created_at": r[8],
+                "last_hit_at": r[9],
+                "reviewed_at": r[10],
+            }
+            for r in rows
+        ]
+
     # ── Debug ─────────────────────────────────────────────────────
 
     @staticmethod

@@ -119,28 +119,37 @@ _GEN_KEYWORDS = frozenset({"gen", "generazione", "generation"})
 # Also excluded: pikachu/eevee/arceus (Pokemon names in game titles).
 
 _GAME_TITLE_STOPWORDS: frozenset[str] = frozenset({
+    # NOTE: all entries MUST be lowercase — tokens are lowercased before matching.
     # Gen 1
     "rosso", "blu", "giallo", "red", "blue", "yellow",
+    "rb",
     # Gen 2
     "oro", "argento", "cristallo", "gold", "silver", "crystal",
+    "gs",
     # Gen 3
     "rubino", "zaffiro", "smeraldo", "ruby", "sapphire", "emerald",
     "rossofuoco", "verdefoglia", "firered", "leafgreen",
+    "frlg", "rse", "rs", "fr", "lg",
     # Gen 4
     "diamante", "perla", "platino", "diamond", "pearl", "platinum",
     "heartgold", "soulsilver",
+    "dp", "pt", "hgss",
     # Gen 5
-    "nero", "bianco", "nero2", "bianco2", "black", "white",
+    "nero", "bianco", "nero2", "bianco2", "black", "white", "black2", "white2",
+    "bw", "bw2",
     # Gen 6
     "omega", "alpha",
+    "oras", "xy",
     # Gen 7
-    "sole", "luna", "ultrasole", "ultraluna", "sun", "moon",
+    "sole", "luna", "ultrasole", "ultraluna", "sun", "moon", "ultrasun", "ultramoon",
+    "usum", "sm",
     # Gen 8
     "spada", "scudo", "sword", "shield",
+    "swsh", "bdsp",
     "lucente", "splendente", "brilliant", "shining",
     "leggende", "legends",
     # Gen 9
-    "scarlatto", "violetto", "scarlet", "violet",
+    "scarlatto", "violetto", "scarlet", "violet", "sv",
 })
 
 # ── Conditional game title tokens ─────────────────────────────────

@@ -1,8 +1,13 @@
 """Admin endpoints — ingestion + cache management (protected by JWT_SECRET)."""
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Body, HTTPException, Path, Query, Request
+from pydantic import BaseModel
 
 from app.core.cache import ResponseCache
+
+
+class UpdateEntryBody(BaseModel):
+    response: str
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -144,3 +149,75 @@ async def cache_cleanup(
     cache = _get_cache(request)
     deleted = await cache.cleanup(max_age_days=max_age_days)
     return {"status": "ok", "stale_entries_removed": deleted}
+
+
+@router.get("/cache/entries")
+async def cache_list_entries(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    reviewed: bool | None = Query(None, description="Filter: true=reviewed, false=not reviewed, omit=all"),
+    generation: int | None = Query(None, ge=1, le=9),
+    search: str | None = Query(None, description="Search in question text"),
+):
+    """List cache entries with pagination and filters.
+
+    Usage:
+        GET /api/admin/cache/entries?secret=...&page=1&reviewed=false
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    return await cache.list_entries(
+        page=page,
+        per_page=per_page,
+        reviewed_only=reviewed,
+        generation=generation,
+        search=search,
+    )
+
+
+@router.put("/cache/entries/{entry_id}")
+async def cache_update_entry(
+    request: Request,
+    entry_id: int = Path(..., description="Cache entry ID"),
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+    body: UpdateEntryBody = Body(...),
+):
+    """Update a cache entry's response and mark it as reviewed.
+
+    Usage:
+        PUT /api/admin/cache/entries/42?secret=...
+        Body: {"response": "New improved response text"}
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    result = await cache.update_entry(entry_id, body.response)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return result
+
+
+@router.post("/cache/entries/{entry_id}/approve")
+async def cache_approve_entry(
+    request: Request,
+    entry_id: int = Path(..., description="Cache entry ID"),
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Mark a cache entry as reviewed without changing the response.
+
+    Usage:
+        POST /api/admin/cache/entries/42/approve?secret=...
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    success = await cache.mark_reviewed(entry_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"status": "ok", "entry_id": entry_id, "reviewed": True}

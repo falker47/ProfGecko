@@ -36,8 +36,10 @@ CREATE TABLE IF NOT EXISTS response_cache (
     generation      INTEGER NOT NULL,
     response        TEXT NOT NULL,
     hit_count       INTEGER NOT NULL DEFAULT 0,
+    reviewed        INTEGER NOT NULL DEFAULT 0,   -- 0=auto, 1=human-reviewed
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-    last_hit_at     TEXT DEFAULT NULL
+    last_hit_at     TEXT DEFAULT NULL,
+    reviewed_at     TEXT DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_cache_exact ON response_cache(exact_hash, generation);

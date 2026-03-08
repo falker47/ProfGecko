@@ -391,38 +391,32 @@ class RAGChain:
         On cache miss: streams from LLM, collects the full response,
         stores it in cache, and sets ``self._last_cache_hit = False``.
 
-        Cache LOOKUP always runs (even for short follow-ups) because
-        if a question matches a cached entry, it's inherently standalone.
-        Cache STORAGE only happens for standalone questions (>= 6 words
-        or no history) to avoid caching context-dependent answers.
+        Cache lookup and storage only happen for the FIRST question
+        in a conversation (no chat history). Follow-up questions are
+        context-dependent and cannot be meaningfully cached.
         """
         self._last_cache_hit = False
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
 
-        # Always try cache lookup — if a question matches a cached
-        # response, it's inherently standalone (it was cached before).
-        # Short questions like "garchomp debolezze gen 4" (4 words)
-        # should still hit cache even with chat history.
-        if cache:
+        # Cache only for first question — follow-ups depend on context
+        # from previous messages and cannot be matched reliably.
+        is_first_question = not history_list
+
+        if cache and is_first_question:
             cached = await cache.get(question, generation)
             if cached is not None:
                 self._last_cache_hit = True
                 yield cached
                 return
 
-        # Cache miss — stream from LLM
+        # Cache miss (or follow-up) — stream from LLM
         full_response: list[str] = []
         async for chunk in self.astream(question, chat_history):
             full_response.append(chunk)
             yield chunk
 
-        # Only STORE standalone questions (not follow-ups like "e le mosse?")
-        # to avoid caching context-dependent answers.
-        is_standalone = (
-            not history_list
-            or len(question.split()) >= _SELF_CONTAINED_WORD_COUNT
-        )
+        # Store only first questions
         response_text = "".join(full_response)
-        if cache and is_standalone and response_text.strip():
+        if cache and is_first_question and response_text.strip():
             await cache.put(question, generation, response_text)

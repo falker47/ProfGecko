@@ -11,6 +11,7 @@ Level 2 — normalized hash:
     4. Strip generation references (gen keyword + adjacent number)
        since generation is already a separate DB column
     5. Remove generic stopwords (articles, prepositions, pronouns)
+       AND game title words (platino, nero, diamond, sword, etc.)
        but KEEP semantically important Pokemon terms (debolezza,
        mossa, tipo, etc.) to avoid false positives
     6. Sort remaining tokens → SHA-256
@@ -108,6 +109,38 @@ _PLURAL_MAP: dict[str, str] = {
 
 _GEN_KEYWORDS = frozenset({"gen", "generazione", "generation"})
 
+# ── Game title stopwords ──────────────────────────────────────────
+# Game titles are stripped because the generation is already stored
+# as a separate DB column. This way "garchomp debolezze platino"
+# matches "garchomp debolezze gen 4" (both → gen=4, hash=same tokens).
+# Excluded: fuoco/foglia (overlap with fire/grass type terms),
+# pikachu/eevee/arceus (Pokemon names in game titles).
+
+_GAME_TITLE_STOPWORDS: frozenset[str] = frozenset({
+    # Gen 1
+    "rosso", "blu", "giallo", "red", "blue", "yellow",
+    # Gen 2
+    "oro", "argento", "cristallo", "gold", "silver", "crystal",
+    # Gen 3
+    "rubino", "zaffiro", "smeraldo", "ruby", "sapphire", "emerald",
+    "rossofuoco", "verdefoglia", "firered", "leafgreen",
+    # Gen 4
+    "diamante", "perla", "platino", "diamond", "pearl", "platinum",
+    "heartgold", "soulsilver",
+    # Gen 5
+    "nero", "bianco", "nero2", "bianco2", "black", "white",
+    # Gen 6
+    "omega", "alpha",
+    # Gen 7
+    "sole", "luna", "ultrasole", "ultraluna", "sun", "moon",
+    # Gen 8
+    "spada", "scudo", "sword", "shield",
+    "lucente", "splendente", "brilliant", "shining",
+    "leggende", "legends",
+    # Gen 9
+    "scarlatto", "violetto", "scarlet", "violet",
+})
+
 
 # ── Hash functions ──────────────────────────────────────────────────
 
@@ -155,10 +188,11 @@ def _normal_hash(question: str) -> str:
             if i + 1 < len(tokens) and tokens[i + 1].isdigit():
                 gen_number_indices.add(i + 1)
 
-    # Step 4: filter stopwords, short tokens, gen-adjacent numbers
+    # Step 4: filter stopwords, game titles, short tokens, gen-adjacent numbers
     filtered = sorted(
         t for i, t in enumerate(tokens)
         if t not in _STOPWORDS
+        and t not in _GAME_TITLE_STOPWORDS
         and len(t) >= 2
         and i not in gen_number_indices
     )
@@ -523,9 +557,15 @@ class ResponseCache:
         filtered = sorted(
             t for i, t in enumerate(tokens)
             if t not in _STOPWORDS
+            and t not in _GAME_TITLE_STOPWORDS
             and len(t) >= 2
             and i not in gen_number_indices
         )
+
+        # Identify game title tokens for debug output
+        game_titles_found = [
+            t for t in tokens if t in _GAME_TITLE_STOPWORDS
+        ]
 
         return {
             "question": question,
@@ -537,6 +577,7 @@ class ResponseCache:
                 "1_after_ordinals": after_ordinals,
                 "2_after_plurals": after_plurals,
                 "3_gen_numbers_removed": sorted(gen_number_indices),
+                "3b_game_titles_removed": game_titles_found,
                 "4_final_tokens": filtered,
                 "5_hash_input": " ".join(filtered),
             },

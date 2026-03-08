@@ -228,6 +228,32 @@ async def cache_approve_entry(
     return {"status": "ok", "entry_id": entry_id, "reviewed": True}
 
 
+@router.post("/cache/rehash")
+async def cache_rehash(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Recompute all hashes after normalization rule changes.
+
+    Run this after deploying new stopwords/synonyms to ensure
+    existing entries match queries hashed with the updated rules.
+
+    Usage:
+        POST /api/admin/cache/rehash?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    result = await cache.rehash_all()
+    return {
+        "status": "ok",
+        "entries_updated": result["updated"],
+        "duplicates_found": result["duplicates_found"],
+        "duplicates": result["duplicates"],
+    }
+
+
 @router.get("/cache/debug")
 async def cache_debug_hash(
     request: Request,

@@ -567,6 +567,62 @@ class ResponseCache:
         logger.info("Cache IMPORT: %d imported, %d skipped", imported, skipped)
         return {"imported": imported, "skipped": skipped}
 
+    # ── Rehash (after normalization rule changes) ───────────────
+
+    async def rehash_all(self) -> dict:
+        """Recompute exact_hash and normal_hash for ALL entries.
+
+        Call this after changing normalization rules (_STOPWORDS,
+        _PLURAL_MAP, _GAME_TITLE_STOPWORDS, etc.) so that existing
+        entries match queries hashed with the new rules.
+
+        Returns count of updated entries and any duplicates found
+        (entries that now produce the same normal_hash + generation).
+        """
+        cursor = await self._db.execute(
+            "SELECT id, question, generation FROM response_cache ORDER BY id"
+        )
+        rows = await cursor.fetchall()
+
+        updated = 0
+        duplicates: list[dict] = []
+        seen_hashes: dict[tuple[str, int], int] = {}  # (normal_hash, gen) → first id
+
+        for r in rows:
+            entry_id, question, generation = r[0], r[1], r[2]
+            new_exact = _exact_hash(question)
+            new_normal = _normal_hash(question)
+
+            # Track duplicates: entries that now share the same normal_hash + gen
+            key = (new_normal, generation)
+            if key in seen_hashes:
+                duplicates.append({
+                    "id": entry_id,
+                    "question": question[:80],
+                    "generation": generation,
+                    "duplicate_of_id": seen_hashes[key],
+                    "normal_hash": new_normal[:16],
+                })
+            else:
+                seen_hashes[key] = entry_id
+
+            await self._db.execute(
+                "UPDATE response_cache SET exact_hash = ?, normal_hash = ? WHERE id = ?",
+                (new_exact, new_normal, entry_id),
+            )
+            updated += 1
+
+        await self._db.commit()
+        logger.info(
+            "Cache REHASH: %d entries updated, %d duplicates found",
+            updated, len(duplicates),
+        )
+        return {
+            "updated": updated,
+            "duplicates_found": len(duplicates),
+            "duplicates": duplicates,
+        }
+
     # ── Export ────────────────────────────────────────────────────
 
     async def export_all(self) -> list[dict]:

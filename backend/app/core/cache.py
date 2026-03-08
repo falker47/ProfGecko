@@ -37,7 +37,7 @@ _STOPWORDS: frozenset[str] = frozenset({
     "il", "lo", "la", "le", "li", "un", "una", "uno", "gli", "dei",
     "del", "della", "delle", "degli", "nel", "nella", "nelle", "nei",
     "negli", "sul", "sulla", "sulle", "al", "alla", "alle", "ai",
-    "che", "chi", "per", "con", "tra", "fra", "non", "piu",
+    "che", "chi", "per", "con", "tra", "fra", "non", "piu", "di",
     "come", "cosa", "quali", "quale", "sono", "suo", "sua", "suoi",
     "sue", "questo", "questa", "quello", "quella",
     "molto", "poco", "troppo", "anche", "ancora",
@@ -117,9 +117,25 @@ def _exact_hash(question: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def _split_gen_tokens(tokens: list[str]) -> list[str]:
+    """Split aggregated generation tokens: gen4 → gen + 4, generation5 → generation + 5."""
+    result: list[str] = []
+    for t in tokens:
+        m = re.match(r"^(gen|generazione|generation)(\d)$", t)
+        if m:
+            result.append(m.group(1))
+            result.append(m.group(2))
+        else:
+            result.append(t)
+    return result
+
+
 def _normal_hash(question: str) -> str:
     """Level 2: normalize + strip gen refs + remove stopwords + sort → SHA-256."""
     tokens = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", question.lower())
+
+    # Step 0: split aggregated gen tokens (gen4 → gen + 4)
+    tokens = _split_gen_tokens(tokens)
 
     # Step 1: ordinals → digits  (quinta → 5, fifth → 5)
     tokens = [_ORDINAL_MAP.get(t, t) for t in tokens]
@@ -403,6 +419,10 @@ class ResponseCache:
         """
         tokens = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", question.lower())
 
+        # Step 0: split gen tokens
+        tokens = _split_gen_tokens(tokens)
+        after_split = list(tokens)
+
         # Step 1: ordinals
         tokens = [_ORDINAL_MAP.get(t, t) for t in tokens]
         after_ordinals = list(tokens)
@@ -434,6 +454,7 @@ class ResponseCache:
             "exact_hash": _exact_hash(question)[:16],
             "normal_hash": _normal_hash(question)[:16],
             "pipeline": {
+                "0_after_gen_split": after_split,
                 "1_after_ordinals": after_ordinals,
                 "2_after_plurals": after_plurals,
                 "3_gen_numbers_removed": sorted(gen_number_indices),

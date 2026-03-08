@@ -129,6 +129,33 @@ export async function cleanupCache(
   return res.json();
 }
 
+// ── Import CSV ───────────────────────────────────────────────────
+
+export async function importCsv(
+  secret: string,
+  file: File,
+): Promise<{ status: string; imported: number; skipped: number; total_in_file: number }> {
+  const url = new URL(`${API_BASE_URL}/api/admin/cache/import`);
+  url.searchParams.set("secret", secret);
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    body: formData,
+    // NOTE: do NOT set Content-Type — browser sets it with boundary for multipart
+  });
+  if (res.status === 403) {
+    throw new Error("AUTH_FAILED");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Errore: ${res.status}`);
+  }
+  return res.json();
+}
+
 // ── Export URL (no fetch, just builds the URL) ────────────────────
 
 export function getExportUrl(secret: string): string {

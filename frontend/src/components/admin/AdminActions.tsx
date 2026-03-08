@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { invalidateCache, cleanupCache, getExportUrl } from "@/lib/admin-api";
+import { useRef, useState } from "react";
+import { invalidateCache, cleanupCache, getExportUrl, importCsv } from "@/lib/admin-api";
 
 interface AdminActionsProps {
   secret: string;
@@ -15,10 +15,12 @@ export default function AdminActions({
   onAuthFailed,
 }: AdminActionsProps) {
   const [message, setMessage] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function showMessage(text: string) {
     setMessage(text);
-    setTimeout(() => setMessage(""), 4000);
+    setTimeout(() => setMessage(""), 5000);
   }
 
   async function handleInvalidate() {
@@ -59,6 +61,30 @@ export default function AdminActions({
     window.open(getExportUrl(secret), "_blank");
   }
 
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const res = await importCsv(secret, file);
+      showMessage(
+        `Importate ${res.imported} voci, ${res.skipped} duplicate saltate (${res.total_in_file} nel file)`,
+      );
+      onAction();
+    } catch (err) {
+      if (err instanceof Error && err.message === "AUTH_FAILED") {
+        onAuthFailed();
+      } else {
+        showMessage(err instanceof Error ? err.message : "Errore nell'importazione");
+      }
+    } finally {
+      setImporting(false);
+      // Reset file input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
@@ -81,6 +107,22 @@ export default function AdminActions({
       >
         Esporta CSV
       </button>
+
+      <label
+        className={`cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 ${
+          importing ? "cursor-not-allowed opacity-50" : ""
+        }`}
+      >
+        {importing ? "Importazione..." : "Importa CSV"}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleImportFile}
+          disabled={importing}
+          className="hidden"
+        />
+      </label>
 
       {message && (
         <span className="rounded-lg bg-gray-800 px-3 py-1.5 text-sm text-white">

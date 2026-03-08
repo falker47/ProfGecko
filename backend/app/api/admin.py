@@ -4,7 +4,7 @@ import csv
 import io
 from pathlib import Path as FilePath
 
-from fastapi import APIRouter, Body, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Body, File, HTTPException, Path, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -247,6 +247,63 @@ async def cache_debug_hash(
         raise HTTPException(status_code=403, detail="Invalid secret")
 
     return ResponseCache.debug_hash(question, generation)
+
+
+@router.post("/cache/import")
+async def cache_import_csv(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+    file: UploadFile = File(..., description="CSV file with columns: question, generation, response"),
+    skip_duplicates: bool = Query(True, description="Skip entries whose normalized hash already exists"),
+):
+    """Bulk-import cache entries from a CSV file.
+
+    The CSV must have at least these columns: question, generation, response.
+    Other columns are ignored. Entries are stored with reviewed=0.
+
+    Usage:
+        POST /api/admin/cache/import?secret=YOUR_JWT_SECRET
+        Content-Type: multipart/form-data
+        Body: file=@seed_cache.csv
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    if not file.filename or not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="File must be a .csv")
+
+    content = await file.read()
+    # Try UTF-8 BOM first, then UTF-8
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("utf-8")
+
+    reader = csv.DictReader(io.StringIO(text))
+
+    # Validate required columns
+    if not reader.fieldnames:
+        raise HTTPException(status_code=400, detail="CSV is empty or has no headers")
+    required = {"question", "generation", "response"}
+    missing = required - set(reader.fieldnames)
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV missing required columns: {', '.join(sorted(missing))}",
+        )
+
+    rows = list(reader)
+    if not rows:
+        raise HTTPException(status_code=400, detail="CSV has no data rows")
+
+    cache = _get_cache(request)
+    result = await cache.import_entries(rows, skip_duplicates=skip_duplicates)
+    return {
+        "status": "ok",
+        "imported": result["imported"],
+        "skipped": result["skipped"],
+        "total_in_file": len(rows),
+    }
 
 
 @router.get("/cache/export")

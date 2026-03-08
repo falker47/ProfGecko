@@ -38,8 +38,8 @@ _STOPWORDS: frozenset[str] = frozenset({
     "del", "della", "delle", "degli", "nel", "nella", "nelle", "nei",
     "negli", "sul", "sulla", "sulle", "al", "alla", "alle", "ai",
     "che", "chi", "per", "con", "tra", "fra", "non", "piu", "di",
-    "come", "cosa", "quali", "quale", "sono", "suo", "sua", "suoi",
-    "sue", "questo", "questa", "quello", "quella",
+    "come", "cosa", "quali", "quale", "si", "sono", "suo", "sua", "suoi",
+    "sue", "questo", "questa", "quello", "quella", "questi", "queste",
     "molto", "poco", "troppo", "anche", "ancora",
     # Italian — common verbs in questions
     "ha", "hai", "puoi", "può", "fa", "vai", "vorrei", "sapere",
@@ -91,7 +91,7 @@ _PLURAL_MAP: dict[str, str] = {
     "mosse": "mossa",
     "statistiche": "statistica",
     "tipi": "tipo",
-    "evoluzioni": "evoluzione",
+    "evoluzioni": "evoluzione", "evolve": "evoluzione",
     # English
     "weaknesses": "weakness",
     "resistances": "resistance",
@@ -407,6 +407,56 @@ class ResponseCache:
         await self._db.commit()
         logger.info("Cache entry #%d marked as REVIEWED", entry_id)
         return True
+
+    # ── Import (bulk seed) ─────────────────────────────────────────
+
+    async def import_entries(
+        self,
+        rows: list[dict],
+        skip_duplicates: bool = True,
+    ) -> dict:
+        """Bulk-import cache entries from a list of dicts.
+
+        Each dict must have: question, generation, response.
+        Hashes are computed automatically. Entries are stored as reviewed=0.
+        If skip_duplicates is True, entries whose normal_hash + generation
+        already exist in the DB are skipped.
+        """
+        imported = 0
+        skipped = 0
+
+        for row in rows:
+            question = row["question"].strip()
+            generation = int(row["generation"])
+            response = row["response"].strip()
+
+            if not question or not response:
+                skipped += 1
+                continue
+
+            exact = _exact_hash(question)
+            normal = _normal_hash(question)
+
+            if skip_duplicates:
+                existing = await self._fetchone(
+                    "SELECT id FROM response_cache WHERE normal_hash = ? AND generation = ?",
+                    (normal, generation),
+                )
+                if existing:
+                    skipped += 1
+                    continue
+
+            await self._db.execute(
+                """INSERT INTO response_cache
+                   (exact_hash, normal_hash, question, generation, response)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (exact, normal, question, generation, response),
+            )
+            imported += 1
+
+        await self._db.commit()
+        logger.info("Cache IMPORT: %d imported, %d skipped", imported, skipped)
+        return {"imported": imported, "skipped": skipped}
 
     # ── Export ────────────────────────────────────────────────────
 

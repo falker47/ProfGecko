@@ -15,6 +15,10 @@ class UpdateEntryBody(BaseModel):
     response: str | None = None
     generation: int | None = None
 
+
+class AddStopwordsBody(BaseModel):
+    words: list[str]
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
@@ -257,6 +261,86 @@ async def cache_rehash(
         "entries_updated": result["updated"],
         "duplicates_found": result["duplicates_found"],
         "duplicates": result["duplicates"],
+    }
+
+
+@router.get("/cache/stopwords")
+async def list_stopwords(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """List all custom stopwords.
+
+    Usage:
+        GET /api/admin/cache/stopwords?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    words = await cache.list_stopwords()
+    return {"words": words, "total": len(words)}
+
+
+@router.post("/cache/stopwords")
+async def add_stopwords(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+    body: AddStopwordsBody = Body(...),
+):
+    """Add custom stopwords and rehash all entries.
+
+    Usage:
+        POST /api/admin/cache/stopwords?secret=YOUR_JWT_SECRET
+        Body: {"words": ["dammi", "fammi"]}
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    if not body.words:
+        raise HTTPException(status_code=400, detail="Provide at least one word")
+
+    cache = _get_cache(request)
+    result = await cache.add_stopwords(body.words)
+
+    # Auto-rehash so all stored hashes reflect the new stopwords
+    rehash_result = await cache.rehash_all()
+
+    return {
+        "status": "ok",
+        "stopwords_added": result["added"],
+        "stopwords_total": result["total"],
+        "entries_rehashed": rehash_result["updated"],
+        "duplicates_found": rehash_result["duplicates_found"],
+    }
+
+
+@router.delete("/cache/stopwords/{word}")
+async def remove_stopword(
+    request: Request,
+    word: str = Path(..., description="Stopword to remove"),
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Remove a custom stopword and rehash all entries.
+
+    Usage:
+        DELETE /api/admin/cache/stopwords/dammi?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    removed = await cache.remove_stopword(word)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Stopword not found")
+
+    # Auto-rehash so all stored hashes reflect the removal
+    rehash_result = await cache.rehash_all()
+
+    return {
+        "status": "ok",
+        "word_removed": word,
+        "entries_rehashed": rehash_result["updated"],
     }
 
 

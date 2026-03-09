@@ -7,6 +7,7 @@ import StatsCards from "./StatsCards";
 import AdminActions from "./AdminActions";
 import EntriesTable from "./EntriesTable";
 import DebugTool from "./DebugTool";
+import StopwordsManager from "./StopwordsManager";
 
 interface AdminDashboardProps {
   secret: string;
@@ -75,6 +76,12 @@ export default function AdminDashboard({
         />
         <EntriesTable
           secret={secret}
+          onAuthFailed={onAuthFailed}
+          refreshKey={refreshKey}
+        />
+        <StopwordsManager
+          secret={secret}
+          onChanged={handleRefresh}
           onAuthFailed={onAuthFailed}
           refreshKey={refreshKey}
         />

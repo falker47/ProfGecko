@@ -28,6 +28,11 @@ import aiosqlite
 
 logger = logging.getLogger(__name__)
 
+# ── Custom stopwords (loaded from DB at startup, managed via admin) ──
+# This set is merged with _STOPWORDS in the hash pipeline.
+# Use load_custom_stopwords() to populate from the DB.
+_custom_stopwords: set[str] = set()
+
 # ── Stopwords — ONLY generic words, NOT Pokemon-specific terms ──────
 # Pokemon terms (debolezza, mossa, tipo, abilita, etc.) are
 # semantically important and MUST stay in the hash to prevent
@@ -263,9 +268,11 @@ def _normal_hash(question: str) -> str:
     conditional_indices = _find_conditional_indices(tokens)
 
     # Step 4: filter stopwords, game titles, conditional, short tokens, gen-numbers
+    # Also includes custom stopwords added via admin panel.
+    all_stopwords = _STOPWORDS | _custom_stopwords
     filtered = sorted(
         t for i, t in enumerate(tokens)
-        if t not in _STOPWORDS
+        if t not in all_stopwords
         and t not in _GAME_TITLE_STOPWORDS
         and len(t) >= 2
         and i not in gen_number_indices
@@ -276,6 +283,23 @@ def _normal_hash(question: str) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
+# ── Custom stopwords I/O ──────────────────────────────────────────
+
+async def load_custom_stopwords(db: aiosqlite.Connection) -> int:
+    """Load custom stopwords from DB into the module-level set.
+
+    Call once at startup. Returns the number of words loaded.
+    """
+    global _custom_stopwords
+    cursor = await db.execute("SELECT word FROM custom_stopwords")
+    rows = await cursor.fetchall()
+    _custom_stopwords = {r[0] for r in rows}
+    if _custom_stopwords:
+        logger.info("Loaded %d custom stopwords: %s",
+                     len(_custom_stopwords), sorted(_custom_stopwords))
+    return len(_custom_stopwords)
+
+
 # ── Cache class ─────────────────────────────────────────────────────
 
 class ResponseCache:
@@ -283,6 +307,52 @@ class ResponseCache:
 
     def __init__(self, db: aiosqlite.Connection) -> None:
         self._db = db
+
+    # ── Custom stopwords management ──────────────────────────────
+
+    async def list_stopwords(self) -> list[str]:
+        """Return all custom stopwords sorted alphabetically."""
+        cursor = await self._db.execute(
+            "SELECT word FROM custom_stopwords ORDER BY word"
+        )
+        rows = await cursor.fetchall()
+        return [r[0] for r in rows]
+
+    async def add_stopwords(self, words: list[str]) -> dict:
+        """Add one or more custom stopwords. Updates the in-memory set too."""
+        global _custom_stopwords
+        added = 0
+        for w in words:
+            w = w.lower().strip()
+            if not w or len(w) < 2:
+                continue
+            try:
+                await self._db.execute(
+                    "INSERT OR IGNORE INTO custom_stopwords (word) VALUES (?)",
+                    (w,),
+                )
+                _custom_stopwords.add(w)
+                added += 1
+            except Exception:
+                pass
+        await self._db.commit()
+        logger.info("Custom stopwords ADD: %d words added, total now %d",
+                     added, len(_custom_stopwords))
+        return {"added": added, "total": len(_custom_stopwords)}
+
+    async def remove_stopword(self, word: str) -> bool:
+        """Remove a custom stopword."""
+        global _custom_stopwords
+        word = word.lower().strip()
+        cursor = await self._db.execute(
+            "DELETE FROM custom_stopwords WHERE word = ?", (word,),
+        )
+        await self._db.commit()
+        _custom_stopwords.discard(word)
+        removed = cursor.rowcount > 0
+        if removed:
+            logger.info("Custom stopword REMOVED: %r", word)
+        return removed
 
     async def get(self, question: str, generation: int) -> str | None:
         """Look up a cached response. Returns response text or None.
@@ -712,10 +782,11 @@ class ResponseCache:
         # Step 3c: conditional game title tokens
         conditional_indices = _find_conditional_indices(tokens)
 
-        # Step 4: filter
+        # Step 4: filter (must match _normal_hash exactly)
+        all_stopwords = _STOPWORDS | _custom_stopwords
         filtered = sorted(
             t for i, t in enumerate(tokens)
-            if t not in _STOPWORDS
+            if t not in all_stopwords
             and t not in _GAME_TITLE_STOPWORDS
             and len(t) >= 2
             and i not in gen_number_indices
@@ -723,6 +794,12 @@ class ResponseCache:
         )
 
         # Identify removed tokens for debug output
+        builtin_stopwords_found = [
+            t for t in tokens if t in _STOPWORDS
+        ]
+        custom_stopwords_found = [
+            t for t in tokens if t in _custom_stopwords
+        ]
         game_titles_found = [
             t for t in tokens if t in _GAME_TITLE_STOPWORDS
         ]
@@ -742,6 +819,8 @@ class ResponseCache:
                 "3_gen_numbers_removed": sorted(gen_number_indices),
                 "3b_game_titles_removed": game_titles_found,
                 "3c_conditional_removed": conditional_found,
+                "3d_builtin_stopwords_removed": builtin_stopwords_found,
+                "3e_custom_stopwords_removed": custom_stopwords_found,
                 "4_final_tokens": filtered,
                 "5_hash_input": " ".join(filtered),
             },

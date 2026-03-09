@@ -43,6 +43,10 @@ export default function DebugTool({ secret, onAuthFailed }: DebugToolProps) {
     { key: "1_after_ordinals", label: "Dopo ordinali" },
     { key: "2_after_plurals", label: "Dopo plurali" },
     { key: "3_gen_numbers_removed", label: "Indici gen rimossi" },
+    { key: "3b_game_titles_removed", label: "Titoli gioco rimossi" },
+    { key: "3c_conditional_removed", label: "Condizionali rimossi" },
+    { key: "3d_builtin_stopwords_removed", label: "Stopword built-in" },
+    { key: "3e_custom_stopwords_removed", label: "Stopword custom" },
     { key: "4_final_tokens", label: "Token finali" },
     { key: "5_hash_input", label: "Input hash" },
   ] as const;

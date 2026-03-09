@@ -44,3 +44,11 @@ CREATE TABLE IF NOT EXISTS response_cache (
 
 CREATE INDEX IF NOT EXISTS idx_cache_exact ON response_cache(exact_hash, generation);
 CREATE INDEX IF NOT EXISTS idx_cache_normal ON response_cache(normal_hash, generation);
+
+-- Custom stopwords added via admin panel.
+-- Loaded at startup and merged with the built-in _STOPWORDS set
+-- so the hash pipeline treats them the same way.
+CREATE TABLE IF NOT EXISTS custom_stopwords (
+    word       TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

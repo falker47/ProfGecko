@@ -5,6 +5,9 @@ import type {
   EntriesFilters,
   CacheEntry,
   DebugHashResult,
+  StopwordsResponse,
+  AddStopwordsResult,
+  RemoveStopwordResult,
 } from "./admin-types";
 
 // ── Helper ────────────────────────────────────────────────────────
@@ -153,6 +156,49 @@ export async function importCsv(
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || `Errore: ${res.status}`);
   }
+  return res.json();
+}
+
+// ── Rehash ────────────────────────────────────────────────────────
+
+export async function rehashCache(
+  secret: string,
+): Promise<{ status: string; entries_updated: number; duplicates_found: number }> {
+  const res = await adminFetch(secret, "/api/admin/cache/rehash", {
+    method: "POST",
+  });
+  return res.json();
+}
+
+// ── Custom stopwords ─────────────────────────────────────────────
+
+export async function listStopwords(
+  secret: string,
+): Promise<StopwordsResponse> {
+  const res = await adminFetch(secret, "/api/admin/cache/stopwords");
+  return res.json();
+}
+
+export async function addStopwords(
+  secret: string,
+  words: string[],
+): Promise<AddStopwordsResult> {
+  const res = await adminFetch(secret, "/api/admin/cache/stopwords", {
+    method: "POST",
+    body: JSON.stringify({ words }),
+  });
+  return res.json();
+}
+
+export async function removeStopword(
+  secret: string,
+  word: string,
+): Promise<RemoveStopwordResult> {
+  const res = await adminFetch(
+    secret,
+    `/api/admin/cache/stopwords/${encodeURIComponent(word)}`,
+    { method: "DELETE" },
+  );
   return res.json();
 }
 

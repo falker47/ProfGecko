@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.config import get_settings
-from app.core.cache import ResponseCache
+from app.core.cache import ResponseCache, load_custom_stopwords
 from app.core.embeddings import get_embeddings
 from app.db.database import Database
 from app.core.llm import get_llm
@@ -61,6 +61,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize response cache (shares the same SQLite connection)
     app.state.cache = ResponseCache(db._conn)
+
+    # Load custom stopwords from DB into the hash pipeline
+    await load_custom_stopwords(db._conn)
 
     yield
 

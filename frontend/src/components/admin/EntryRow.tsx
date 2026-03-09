@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { approveEntry } from "@/lib/admin-api";
 import type { CacheEntry } from "@/lib/admin-types";
 import EntryEditor from "./EntryEditor";
+import TokenInspector from "./TokenInspector";
 
 interface EntryRowProps {
   entry: CacheEntry;
@@ -127,6 +128,15 @@ export default function EntryRow({
                   <ReactMarkdown>{entry.response}</ReactMarkdown>
                 </div>
               </div>
+
+              {/* Token inspector */}
+              <TokenInspector
+                question={entry.question}
+                generation={entry.generation}
+                secret={secret}
+                onStopwordAdded={onUpdated}
+                onAuthFailed={onAuthFailed}
+              />
 
               {/* Metadati */}
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-400">

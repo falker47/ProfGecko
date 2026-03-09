@@ -38,9 +38,32 @@ export interface DebugHashResult {
     "1_after_ordinals": string[];
     "2_after_plurals": string[];
     "3_gen_numbers_removed": number[];
+    "3b_game_titles_removed": string[];
+    "3c_conditional_removed": string[];
+    "3d_builtin_stopwords_removed": string[];
+    "3e_custom_stopwords_removed": string[];
     "4_final_tokens": string[];
     "5_hash_input": string;
   };
+}
+
+export interface StopwordsResponse {
+  words: string[];
+  total: number;
+}
+
+export interface AddStopwordsResult {
+  status: string;
+  stopwords_added: number;
+  stopwords_total: number;
+  entries_rehashed: number;
+  duplicates_found: number;
+}
+
+export interface RemoveStopwordResult {
+  status: string;
+  word_removed: string;
+  entries_rehashed: number;
 }
 
 export interface EntriesFilters {

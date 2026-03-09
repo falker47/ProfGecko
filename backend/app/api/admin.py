@@ -94,6 +94,24 @@ async def trigger_ingestion(
         use_api_delay=use_api_delay,
     )
 
+    # Reload the in-memory vectorstore + RAG chain so the server uses the
+    # freshly indexed data without needing a restart.
+    from app.core.vectorstore import get_vectorstore
+    from app.core.llm import get_llm
+    from app.core.rag_chain import RAGChain
+
+    new_vs = get_vectorstore(persist_dir, settings.chroma_collection_name, embeddings)
+    request.app.state.vectorstore = new_vs
+
+    llm = get_llm(settings.llm_provider, model=settings.llm_model, temperature=settings.llm_temperature)
+    fallback_llm = None
+    if settings.llm_fallback_model and settings.llm_fallback_model != settings.llm_model:
+        fallback_llm = get_llm(settings.llm_provider, model=settings.llm_fallback_model, temperature=settings.llm_temperature)
+
+    request.app.state.rag_chain = RAGChain(
+        llm=llm, vectorstore=new_vs, k=settings.retriever_k, fallback_llm=fallback_llm,
+    )
+
     return {
         "status": "completed",
         "documents_indexed": len(all_docs),

@@ -183,9 +183,22 @@ export async function importCsv(
 
 // ── Rehash ────────────────────────────────────────────────────────
 
+interface RehashDuplicate {
+  id: number;
+  question: string;
+  generation: number;
+  duplicate_of_id: number;
+  normal_hash: string;
+}
+
 export async function rehashCache(
   secret: string,
-): Promise<{ status: string; entries_updated: number; duplicates_found: number }> {
+): Promise<{
+  status: string;
+  entries_updated: number;
+  duplicates_found: number;
+  duplicates: RehashDuplicate[];
+}> {
   const res = await adminFetch(secret, "/api/admin/cache/rehash", {
     method: "POST",
   });

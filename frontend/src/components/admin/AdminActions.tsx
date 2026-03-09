@@ -18,9 +18,9 @@ export default function AdminActions({
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function showMessage(text: string) {
+  function showMessage(text: string, duration = 5000) {
     setMessage(text);
-    setTimeout(() => setMessage(""), 5000);
+    setTimeout(() => setMessage(""), duration);
   }
 
   async function handleInvalidate() {
@@ -63,9 +63,14 @@ export default function AdminActions({
     }
     try {
       const res = await rehashCache(secret);
-      showMessage(
-        `${res.entries_updated} hash aggiornati, ${res.duplicates_found} duplicati trovati`,
-      );
+      let msg = `${res.entries_updated} hash aggiornati, ${res.duplicates_found} duplicati trovati`;
+      if (res.duplicates && res.duplicates.length > 0) {
+        const details = res.duplicates
+          .map((d) => `#${d.id} "${d.question}" (gen${d.generation}, dup di #${d.duplicate_of_id}, hash=${d.normal_hash})`)
+          .join(" | ");
+        msg += ` → ${details}`;
+      }
+      showMessage(msg, res.duplicates_found > 0 ? 30000 : 5000);
       onAction();
     } catch (err) {
       if (err instanceof Error && err.message === "AUTH_FAILED") {

@@ -854,6 +854,10 @@ class ResponseCache:
             gen_params,
         )
         total_groups = (await count_cursor.fetchone())[0]
+        logger.info(
+            "list_duplicate_groups: gen_filter=%s, total_groups=%d",
+            generation, total_groups,
+        )
 
         offset = (page - 1) * per_page
         group_cursor = await self._db.execute(

@@ -48,6 +48,9 @@ _STOP_WORDS = frozenset({
     "strategia", "competitivo", "counter", "contrastare",
     "avventura", "conviene", "alternativa", "alternative",
     "vantaggi", "svantaggi",
+    # Trainer / gym terms
+    "capopalestra", "capipalestra", "superquattro",
+    "campione", "champion", "palestra", "lega",
     # Termini Pokemon generici
     "pokemon", "pokémon",
     "tipo", "tipi", "mossa", "mosse", "abilita", "stat", "statistiche",
@@ -169,6 +172,9 @@ _STRATEGIC_KEYWORDS: list[str] = [
     "alternativa", "alternative",
     # In-game playthrough
     "avventura", "playthrough", "completare",
+    # Trainers / gym leaders
+    "capopalestra", "capipalestra", "superquattro", "elite four",
+    "campione", "champion", "palestra", "lega",
 ]
 
 
@@ -408,6 +414,40 @@ class RAGChain:
             ))
         return docs
 
+    def _find_trainer_docs(self, generation: int) -> list[Document]:
+        """Fetch trainer_info documents (gym leaders, E4, champion) for a generation.
+
+        Used for strategic queries to provide accurate gym leader / Elite Four
+        data instead of letting the LLM hallucinate matchups.
+        """
+        collection = self.vectorstore._collection
+        try:
+            results = collection.get(
+                where={
+                    "$and": [
+                        {"generation": generation},
+                        {"entity_type": "trainer_info"},
+                    ],
+                },
+                include=["documents", "metadatas"],
+            )
+        except Exception:
+            return []
+        docs = []
+        for j, doc_id in enumerate(results["ids"]):
+            docs.append(Document(
+                page_content=results["documents"][j],
+                metadata=results["metadatas"][j],
+            ))
+        if docs:
+            logger.info(
+                "Trainer docs for gen %d: found %d docs (%s)",
+                generation,
+                len(docs),
+                [d.metadata.get("game_it", "?") for d in docs],
+            )
+        return docs
+
     def _retrieve(
         self,
         retrieval_query: str,
@@ -438,6 +478,11 @@ class RAGChain:
                 "bst_ranking_non_legendary", generation,
             )
 
+        # Per domande strategiche, inietta anche i dati dei capipalestra/E4
+        trainer_docs: list[Document] = []
+        if is_strategic:
+            trainer_docs = self._find_trainer_docs(generation)
+
         # Phase 1: exact name matching sui metadata
         # Usa sia la domanda originale che la retrieval_query arricchita
         # per catturare nomi da follow-up (es. "che debolezze ha?" + history)
@@ -445,10 +490,16 @@ class RAGChain:
             original_question, generation, retrieval_query=retrieval_query,
         )
 
-        # Combina summary + name match (summary prima)
+        # Combina summary + trainer + name match (summary e trainer prima)
+        pre_contents = {s.page_content for s in summary_docs}
         pre_docs = summary_docs + [
+            d for d in trainer_docs
+            if d.page_content not in pre_contents
+        ]
+        pre_contents.update(d.page_content for d in pre_docs)
+        pre_docs += [
             d for d in exact_docs
-            if d.page_content not in {s.page_content for s in summary_docs}
+            if d.page_content not in pre_contents
         ]
 
         # Phase 2: semantic search per contesto aggiuntivo
@@ -472,23 +523,24 @@ class RAGChain:
         )
         semantic_docs = retriever.invoke(retrieval_query)
 
-        # Combina: summary + name match prima, poi semantic (senza duplicati)
-        # Deduplica per chiave (entity_type, name_en, generation)
+        # Combina: summary + trainer + name match prima, poi semantic (senza duplicati)
+        # Deduplica per chiave composita: usa campi diversi in base al tipo di doc
+        def _doc_key(d: Document) -> tuple:
+            etype = d.metadata.get("entity_type", "")
+            gen = d.metadata.get("generation", "")
+            # Ogni entity_type ha un identificatore univoco diverso
+            if etype == "trainer_info":
+                return (etype, d.metadata.get("game_slug", ""), gen)
+            if etype == "summary":
+                return (etype, d.metadata.get("summary_category", ""), gen)
+            return (etype, d.metadata.get("name_en", ""), gen)
+
         seen_keys: set[tuple] = set()
         for d in pre_docs:
-            key = (
-                d.metadata.get("entity_type", ""),
-                d.metadata.get("name_en", ""),
-                d.metadata.get("generation", ""),
-            )
-            seen_keys.add(key)
+            seen_keys.add(_doc_key(d))
 
         for doc in semantic_docs:
-            key = (
-                doc.metadata.get("entity_type", ""),
-                doc.metadata.get("name_en", ""),
-                doc.metadata.get("generation", ""),
-            )
+            key = _doc_key(doc)
             if key not in seen_keys:
                 seen_keys.add(key)
                 pre_docs.append(doc)
@@ -496,12 +548,13 @@ class RAGChain:
         final_docs = pre_docs[:effective_k]
 
         logger.info(
-            "Query: %r | Gen: %d | Strategic: %s | Excluded: %s | Summary: %d | NameMatch: %d | Semantic: %d | Final: %d | Types: %s",
+            "Query: %r | Gen: %d | Strategic: %s | Excluded: %s | Summary: %d | Trainer: %d | NameMatch: %d | Semantic: %d | Final: %d | Types: %s",
             retrieval_query[:80],
             generation,
             is_strategic,
             excluded,
             len(summary_docs),
+            len(trainer_docs),
             len(exact_docs),
             len(semantic_docs),
             len(final_docs),

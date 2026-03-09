@@ -58,6 +58,9 @@ _STOPWORDS: frozenset[str] = frozenset({
     # Italian — strategic advice verbs / modifiers
     "consiglio", "consigli", "consigliata", "consigliato", "consiglia",
     "conviene", "scegliere", "usare", "sfruttare",
+    # Italian — trainer / gym terms (strategic queries)
+    "capopalestra", "capipalestra", "superquattro",
+    "campione", "palestra", "palestre", "lega",
     # Italian — generic adjectives / nouns in questions
     "forte", "buono", "buona", "bene", "male",
     "info", "informazioni", "effetto",

@@ -1676,6 +1676,121 @@ def _build_type_name_lookup(all_types: dict[int, dict]) -> dict[str, str]:
     return type_name_it
 
 
+def build_trainer_documents(generation: int) -> list[Document]:
+    """Build documents for gym leaders, Elite Four and champions.
+
+    Uses static data from trainer_data.py (PokeAPI doesn't expose NPC
+    trainer data). Produces one document per game version that falls
+    under the given generation, listing all notable trainers and their
+    teams so the LLM can reason about type matchups.
+    """
+    from app.ingestion.trainer_data import TRAINER_DATA, _t
+
+    docs: list[Document] = []
+    for slug, data in TRAINER_DATA.items():
+        if data["generation"] != generation:
+            continue
+
+        lines: list[str] = []
+        game_it = data["game_it"]
+        region = data["region_it"]
+        lines.append(
+            f"Capipalestra, Superquattro e Campione in {game_it} "
+            f"(Generazione {generation}, regione {region}):"
+        )
+
+        # Gym leaders (or Kahunas for Gen 7)
+        has_gyms = data.get("has_gyms", True)
+        if has_gyms and data.get("gym_leaders"):
+            lines.append("")
+            lines.append("Capipalestra:")
+            for i, gl in enumerate(data["gym_leaders"], 1):
+                name_it = gl["name"]
+                name_en = gl.get("name_en", "")
+                name_display = (
+                    f"{name_it} ({name_en})" if name_en and name_en != name_it
+                    else name_it
+                )
+                type_it = _t(gl["type"])
+                city = gl.get("city_it", "")
+                team_str = ", ".join(gl["team"])
+                version_note = f" [solo {gl['version']}]" if gl.get("version") else ""
+                lines.append(
+                    f"{i}. {name_display} - {city} - Tipo: {type_it} "
+                    f"- Squadra: {team_str}{version_note}"
+                )
+        elif not has_gyms:
+            # Gen 7 — Kahunas + Trial Captains
+            if data.get("kahunas"):
+                lines.append("")
+                lines.append("Kahuna delle isole:")
+                for kh in data["kahunas"]:
+                    name = kh["name"]
+                    type_it = _t(kh["type"])
+                    island = kh.get("island_it", "")
+                    team_str = ", ".join(kh.get("team", []))
+                    lines.append(
+                        f"- {name} - {island} - Tipo: {type_it} - Squadra: {team_str}"
+                    )
+            if data.get("trial_captains"):
+                lines.append("")
+                lines.append("Capitani delle prove:")
+                for tc in data["trial_captains"]:
+                    name = tc["name"]
+                    type_it = _t(tc["type"])
+                    team_str = ", ".join(tc.get("team", []))
+                    if team_str:
+                        lines.append(f"- {name} - Tipo: {type_it} - Squadra: {team_str}")
+                    else:
+                        lines.append(f"- {name} - Tipo: {type_it}")
+
+        # Elite Four
+        if data.get("elite_four"):
+            lines.append("")
+            lines.append("Superquattro:")
+            for j, e4 in enumerate(data["elite_four"], 1):
+                name_it = e4["name"]
+                name_en = e4.get("name_en", "")
+                name_display = (
+                    f"{name_it} ({name_en})" if name_en and name_en != name_it
+                    else name_it
+                )
+                type_it = _t(e4["type"])
+                team_str = ", ".join(e4["team"])
+                lines.append(f"{j}. {name_display} - Tipo: {type_it} - Squadra: {team_str}")
+
+        # Champion
+        champ = data.get("champion")
+        if champ:
+            lines.append("")
+            name_it = champ["name"]
+            name_en = champ.get("name_en", "")
+            name_display = (
+                f"{name_it} ({name_en})" if name_en and name_en != name_it
+                else name_it
+            )
+            type_it = _t(champ["type"])
+            team_str = ", ".join(champ["team"])
+            note = f"\nNota: {champ['note']}" if champ.get("note") else ""
+            lines.append(
+                f"Campione: {name_display} - Tipo: {type_it} - Squadra: {team_str}{note}"
+            )
+
+        content = "\n".join(lines)
+        docs.append(Document(
+            page_content=content,
+            metadata={
+                "entity_type": "trainer_info",
+                "generation": generation,
+                "game_slug": slug,
+                "game_it": game_it,
+                "region": region,
+            },
+        ))
+
+    return docs
+
+
 def build_all_documents_for_generation(
     all_data: dict,
     generation: int,
@@ -1753,5 +1868,7 @@ def build_all_documents_for_generation(
         all_data["natures"],
         generation,
     ))
+
+    docs.extend(build_trainer_documents(generation))
 
     return docs

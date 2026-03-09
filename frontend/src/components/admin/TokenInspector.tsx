@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { debugHash, addStopwords } from "@/lib/admin-api";
+import { debugHash, addStopwords, removeStopword } from "@/lib/admin-api";
 import type { DebugHashResult } from "@/lib/admin-types";
 
 interface TokenInspectorProps {
@@ -21,7 +21,7 @@ export default function TokenInspector({
 }: TokenInspectorProps) {
   const [result, setResult] = useState<DebugHashResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -48,14 +48,13 @@ export default function TokenInspector({
   }, [question, generation, secret, onAuthFailed]);
 
   async function handleAddStopword(word: string) {
-    setAdding(word);
+    setBusy(word);
     setMessage("");
     try {
       const res = await addStopwords(secret, [word]);
       setMessage(
         `"${word}" aggiunta — ${res.entries_rehashed} entry ricalcolate`,
       );
-      // Re-fetch debug to show updated pipeline
       const data = await debugHash(secret, question, generation);
       setResult(data);
       onStopwordAdded();
@@ -66,7 +65,29 @@ export default function TokenInspector({
         setMessage("Errore nell'aggiunta");
       }
     } finally {
-      setAdding(null);
+      setBusy(null);
+    }
+  }
+
+  async function handleRemoveStopword(word: string) {
+    setBusy(word);
+    setMessage("");
+    try {
+      const res = await removeStopword(secret, word);
+      setMessage(
+        `"${word}" rimossa — ${res.entries_rehashed} entry ricalcolate`,
+      );
+      const data = await debugHash(secret, question, generation);
+      setResult(data);
+      onStopwordAdded();
+    } catch (err) {
+      if (err instanceof Error && err.message === "AUTH_FAILED") {
+        onAuthFailed();
+      } else {
+        setMessage("Errore nella rimozione");
+      }
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -98,11 +119,11 @@ export default function TokenInspector({
             <button
               key={token}
               onClick={() => handleAddStopword(token)}
-              disabled={adding !== null}
+              disabled={busy !== null}
               title={`Aggiungi "${token}" come stopword`}
               className="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-mono text-xs text-emerald-800 transition-colors hover:bg-red-50 hover:border-red-300 hover:text-red-700 disabled:opacity-50"
             >
-              {adding === token ? "..." : token}
+              {busy === token ? "..." : token}
             </button>
           ))
         ) : (
@@ -110,7 +131,7 @@ export default function TokenInspector({
         )}
       </div>
 
-      {/* Removed tokens (readonly, for info) */}
+      {/* Removed tokens */}
       {(removedBuiltin.length > 0 ||
         removedCustom.length > 0 ||
         removedGame.length > 0) && (
@@ -120,25 +141,28 @@ export default function TokenInspector({
             <span
               key={`b-${token}-${i}`}
               className="rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-400 line-through"
-              title="Stopword built-in"
+              title="Stopword built-in (non rimovibile)"
             >
               {token}
             </span>
           ))}
+          {/* Custom stopwords — clickable to remove (unflag) */}
           {removedCustom.map((token, i) => (
-            <span
+            <button
               key={`c-${token}-${i}`}
-              className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-mono text-xs text-amber-600 line-through"
-              title="Stopword personalizzata"
+              onClick={() => handleRemoveStopword(token)}
+              disabled={busy !== null}
+              title={`Rimuovi "${token}" dalle stopword`}
+              className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-mono text-xs text-amber-600 line-through transition-colors hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 hover:no-underline disabled:opacity-50"
             >
-              {token}
-            </span>
+              {busy === token ? "..." : token}
+            </button>
           ))}
           {removedGame.map((token, i) => (
             <span
               key={`g-${token}-${i}`}
               className="rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-400 line-through"
-              title="Titolo gioco"
+              title="Titolo gioco (non rimovibile)"
             >
               {token}
             </span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { invalidateCache, cleanupCache, getExportUrl, importCsv } from "@/lib/admin-api";
+import { invalidateCache, cleanupCache, rehashCache, getExportUrl, importCsv } from "@/lib/admin-api";
 
 interface AdminActionsProps {
   secret: string;
@@ -57,6 +57,25 @@ export default function AdminActions({
     }
   }
 
+  async function handleRehash() {
+    if (!confirm("Ricalcolare tutti gli hash della cache? Le entry esistenti verranno aggiornate.")) {
+      return;
+    }
+    try {
+      const res = await rehashCache(secret);
+      showMessage(
+        `${res.entries_updated} hash aggiornati, ${res.duplicates_found} duplicati trovati`,
+      );
+      onAction();
+    } catch (err) {
+      if (err instanceof Error && err.message === "AUTH_FAILED") {
+        onAuthFailed();
+      } else {
+        showMessage("Errore nel rehash");
+      }
+    }
+  }
+
   function handleExport() {
     window.open(getExportUrl(secret), "_blank");
   }
@@ -99,6 +118,13 @@ export default function AdminActions({
         className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600"
       >
         Pulizia Vecchie
+      </button>
+
+      <button
+        onClick={handleRehash}
+        className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+      >
+        Rehash
       </button>
 
       <button

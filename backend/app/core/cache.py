@@ -52,15 +52,13 @@ _STOPWORDS: frozenset[str] = frozenset({
     # Italian — common verbs / filler in questions
     "ha", "hai", "puoi", "può", "fa", "vai", "vorrei", "sapere",
     "parlami", "dimmi", "mostrami", "spiegami", "descrivi", "elenca",
-    "confronta", "confronto", "vincerebbe", "scontro", "meglio",
+    "confronta", "confronto", "vincerebbe", "scontro",
     "funziona", "funzionano", "impara", "apprende", "possiede",
     "cos",  # from "cos'è" (tokenized as "cos" + "è")
-    # Italian — strategic advice verbs / modifiers
-    "consiglio", "consigli", "consigliata", "consigliato", "consiglia",
-    "conviene", "scegliere", "usare", "sfruttare",
-    # Italian — trainer / gym terms (strategic queries)
-    "capopalestra", "capipalestra", "superquattro",
-    "campione", "palestra", "palestre", "lega",
+    # NOTE: parole strategiche (consiglio, meglio, conviene, etc.) e
+    # trainer (capipalestra, superquattro, etc.) NON sono stopwords.
+    # Vengono normalizzate a token canonici in _STRATEGIC_SYNONYM_MAP
+    # per distinguere query esplorative da query strategiche.
     # Italian — generic adjectives / nouns in questions
     "forte", "buono", "buona", "bene", "male",
     "info", "informazioni", "effetto",
@@ -139,6 +137,46 @@ _PLURAL_MAP: dict[str, str] = {
     "evolves": "evoluzione",
     "weak": "weakness",
     "moveset": "move",
+}
+
+# ── Strategic intent normalization ────────────────────────────────
+# Tutte le parole che indicano "consiglio strategico" convergono
+# al token canonico _consiglio_. Questo distingue query esplorative
+# ("quali starter ci sono") da query strategiche ("miglior starter").
+# Analogamente, termini relativi a trainer/palestre convergono a
+# _trainer_ per evitare hash vuoti e distinguere il contesto.
+
+_STRATEGIC_SYNONYM_MAP: dict[str, str] = {
+    # IT — advisory intent → _consiglio_
+    "consiglio": "_consiglio_",
+    "consigli": "_consiglio_",
+    "consigliata": "_consiglio_",
+    "consigliato": "_consiglio_",
+    "consiglia": "_consiglio_",
+    "consigliami": "_consiglio_",
+    "migliore": "_consiglio_",
+    "migliori": "_consiglio_",
+    "miglior": "_consiglio_",
+    "meglio": "_consiglio_",
+    "conviene": "_consiglio_",
+    "scegliere": "_consiglio_",
+    # EN — advisory intent → _consiglio_
+    "best": "_consiglio_",
+    "recommend": "_consiglio_",
+    "recommended": "_consiglio_",
+    "should": "_consiglio_",
+    # IT — trainer / gym terms → _trainer_
+    "capopalestra": "_trainer_",
+    "capipalestra": "_trainer_",
+    "superquattro": "_trainer_",
+    "campione": "_trainer_",
+    "palestra": "_trainer_",
+    "palestre": "_trainer_",
+    "lega": "_trainer_",
+    # EN — trainer terms → _trainer_
+    "gym": "_trainer_",
+    "leader": "_trainer_",
+    "champion": "_trainer_",
 }
 
 # ── Generation keyword triggers ─────────────────────────────────────
@@ -254,8 +292,12 @@ def _normal_hash(question: str) -> str:
     # Step 1: ordinals → digits  (quinta → 5, fifth → 5)
     tokens = [_ORDINAL_MAP.get(t, t) for t in tokens]
 
-    # Step 2: plurals → singulars (debolezze → debolezza)
+    # Step 2a: plurals → singulars (debolezze → debolezza)
     tokens = [_PLURAL_MAP.get(t, t) for t in tokens]
+
+    # Step 2b: strategic intent normalization
+    # (consiglio/migliore/meglio → _consiglio_, capipalestra → _trainer_)
+    tokens = [_STRATEGIC_SYNONYM_MAP.get(t, t) for t in tokens]
 
     # Step 3: find generation-adjacent numbers and mark for removal.
     # Generation is already stored as a separate column, so the
@@ -275,15 +317,17 @@ def _normal_hash(question: str) -> str:
 
     # Step 4: filter stopwords, game titles, conditional, short tokens, gen-numbers
     # Also includes custom stopwords added via admin panel.
+    # sorted(set(...)) deduplicates canonical tokens (e.g. "consigliami miglior"
+    # both map to _consiglio_ but we only need it once in the hash).
     all_stopwords = _STOPWORDS | _custom_stopwords
-    filtered = sorted(
+    filtered = sorted(set(
         t for i, t in enumerate(tokens)
         if t not in all_stopwords
         and t not in _GAME_TITLE_STOPWORDS
         and len(t) >= 2
         and i not in gen_number_indices
         and i not in conditional_indices
-    )
+    ))
 
     key = " ".join(filtered)
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
@@ -825,9 +869,13 @@ class ResponseCache:
         tokens = [_ORDINAL_MAP.get(t, t) for t in tokens]
         after_ordinals = list(tokens)
 
-        # Step 2: plurals
+        # Step 2a: plurals
         tokens = [_PLURAL_MAP.get(t, t) for t in tokens]
         after_plurals = list(tokens)
+
+        # Step 2b: strategic intent normalization
+        tokens = [_STRATEGIC_SYNONYM_MAP.get(t, t) for t in tokens]
+        after_strategic = list(tokens)
 
         # Step 3: gen numbers
         gen_number_indices: set[int] = set()
@@ -843,14 +891,14 @@ class ResponseCache:
 
         # Step 4: filter (must match _normal_hash exactly)
         all_stopwords = _STOPWORDS | _custom_stopwords
-        filtered = sorted(
+        filtered = sorted(set(
             t for i, t in enumerate(tokens)
             if t not in all_stopwords
             and t not in _GAME_TITLE_STOPWORDS
             and len(t) >= 2
             and i not in gen_number_indices
             and i not in conditional_indices
-        )
+        ))
 
         # Identify removed tokens for debug output
         builtin_stopwords_found = [
@@ -874,7 +922,8 @@ class ResponseCache:
             "pipeline": {
                 "0_after_gen_split": after_split,
                 "1_after_ordinals": after_ordinals,
-                "2_after_plurals": after_plurals,
+                "2a_after_plurals": after_plurals,
+                "2b_after_strategic": after_strategic,
                 "3_gen_numbers_removed": sorted(gen_number_indices),
                 "3b_game_titles_removed": game_titles_found,
                 "3c_conditional_removed": conditional_found,

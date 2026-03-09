@@ -59,6 +59,69 @@ _SELF_CONTAINED_WORD_COUNT = 6
 # Matched (lowercase) against response text to auto-flag as feedback='M'.
 _MISSING_PHRASE = "non ho questa informazione"
 
+# --- Analytical query detection ---
+# Maps keyword patterns to summary_category values for targeted retrieval.
+# When a query contains these keywords (and no specific Pokemon name),
+# the retriever fetches pre-computed summary docs instead of individual Pokemon.
+_SUMMARY_KEYWORD_MAP: list[tuple[list[str], list[str]]] = [
+    # (keyword patterns, summary_categories to fetch)
+    (
+        ["piu forte", "piu forti", "migliore", "migliori", "classifica",
+         "ranking", "top", "potente", "potenti"],
+        ["bst_ranking_overall", "bst_ranking_non_legendary"],
+    ),
+    (
+        ["piu veloce", "piu veloci", "velocita"],
+        ["stat_ranking_speed"],
+    ),
+    (
+        ["piu attacco", "attacco fisico piu alto", "attacco piu alto"],
+        ["stat_ranking_atk"],
+    ),
+    (
+        ["piu difesa", "difesa fisica piu alta", "difesa piu alta"],
+        ["stat_ranking_defense"],
+    ),
+    (
+        ["attacco speciale piu alto", "piu attacco speciale"],
+        ["stat_ranking_spatk"],
+    ),
+    (
+        ["difesa speciale piu alta", "piu difesa speciale"],
+        ["stat_ranking_spdef"],
+    ),
+    (
+        ["piu hp", "piu vita", "piu punti salute", "punti vita piu alti",
+         "hp piu alti"],
+        ["stat_ranking_hp"],
+    ),
+    (
+        ["leggendari", "leggendario", "mitici", "mitico"],
+        ["legendary_mythical_list"],
+    ),
+    (
+        ["quanti pokemon", "distribuzione", "tipo piu comune",
+         "tipo piu raro", "tipi piu comuni"],
+        ["type_distribution"],
+    ),
+]
+
+
+def _detect_summary_categories(question: str) -> list[str]:
+    """Detect which summary categories are relevant for an analytical query.
+
+    Returns a list of summary_category values to fetch, or empty list
+    if the query is not analytical.
+    """
+    q = question.lower()
+    categories: list[str] = []
+    for keywords, cats in _SUMMARY_KEYWORD_MAP:
+        if any(kw in q for kw in keywords):
+            for cat in cats:
+                if cat not in categories:
+                    categories.append(cat)
+    return categories
+
 
 def _detect_excluded_types(question: str) -> list[str]:
     """Determina quali entity_type escludere dal retrieval ChromaDB.
@@ -220,19 +283,77 @@ class RAGChain:
             )
         return found_docs
 
+    def _find_summaries(
+        self,
+        question: str,
+        generation: int,
+    ) -> list[Document]:
+        """Cerca documenti riassuntivi per domande analitiche/classifiche.
+
+        Quando la domanda contiene keyword come "piu forte", "classifica",
+        "leggendari", etc., recupera i documenti summary pre-computati
+        per categoria. Questi non vengono trovati dal name matching
+        (nome troppo generico) ne dalla semantic search (embedding dilution
+        con centinaia di documenti Pokemon individuali).
+        """
+        categories = _detect_summary_categories(question)
+        if not categories:
+            return []
+
+        collection = self.vectorstore._collection
+        found_docs: list[Document] = []
+        found_ids: set[str] = set()
+
+        for cat in categories:
+            try:
+                results = collection.get(
+                    where={
+                        "$and": [
+                            {"generation": generation},
+                            {"entity_type": "summary"},
+                            {"summary_category": cat},
+                        ],
+                    },
+                    include=["documents", "metadatas"],
+                )
+            except Exception:
+                continue
+
+            for j, doc_id in enumerate(results["ids"]):
+                if doc_id not in found_ids:
+                    found_ids.add(doc_id)
+                    found_docs.append(Document(
+                        page_content=results["documents"][j],
+                        metadata=results["metadatas"][j],
+                    ))
+
+        if found_docs:
+            logger.info(
+                "Summary match for %r: found %d docs: %s",
+                categories,
+                len(found_docs),
+                [d.metadata.get("summary_category") for d in found_docs],
+            )
+        return found_docs
+
     def _retrieve(
         self,
         retrieval_query: str,
         generation: int,
         original_question: str,
     ) -> list[Document]:
-        """Recupera documenti con strategia ibrida: name match + semantic search.
+        """Recupera documenti con strategia ibrida a 3 fasi.
 
-        1. Name matching: cerca entita il cui nome appare nella domanda
+        1. Summary matching: per domande analitiche, recupera i documenti
+           riassuntivi pre-computati (classifiche, distribuzioni tipo, etc.)
+        2. Name matching: cerca entita il cui nome appare nella domanda
            (risolve l'embedding dilution dei documenti lunghi)
-        2. Semantic search: riempie i posti rimanenti con risultati
+        3. Semantic search: riempie i posti rimanenti con risultati
            semanticamente rilevanti (cattura contesto aggiuntivo)
         """
+        # Phase 0: summary document matching per domande analitiche
+        summary_docs = self._find_summaries(original_question, generation)
+
         # Phase 1: exact name matching sui metadata
         # Usa sia la domanda originale che la retrieval_query arricchita
         # per catturare nomi da follow-up (es. "che debolezze ha?" + history)
@@ -240,8 +361,14 @@ class RAGChain:
             original_question, generation, retrieval_query=retrieval_query,
         )
 
+        # Combina summary + name match (summary prima)
+        pre_docs = summary_docs + [
+            d for d in exact_docs
+            if d.page_content not in {s.page_content for s in summary_docs}
+        ]
+
         # Phase 2: semantic search per contesto aggiuntivo
-        remaining_k = max(self.k - len(exact_docs), 3)
+        remaining_k = max(self.k - len(pre_docs), 3)
         excluded = _detect_excluded_types(original_question)
 
         if excluded:
@@ -261,10 +388,10 @@ class RAGChain:
         )
         semantic_docs = retriever.invoke(retrieval_query)
 
-        # Combina: exact match prima, poi semantic (senza duplicati)
+        # Combina: summary + name match prima, poi semantic (senza duplicati)
         # Deduplica per chiave (entity_type, name_en, generation)
         seen_keys: set[tuple] = set()
-        for d in exact_docs:
+        for d in pre_docs:
             key = (
                 d.metadata.get("entity_type", ""),
                 d.metadata.get("name_en", ""),
@@ -280,18 +407,17 @@ class RAGChain:
             )
             if key not in seen_keys:
                 seen_keys.add(key)
-                exact_docs.append(doc)
+                pre_docs.append(doc)
 
-        final_docs = exact_docs[:self.k]
+        final_docs = pre_docs[:self.k]
 
         logger.info(
-            "Query: %r | Gen: %d | Excluded: %s | NameMatch: %d | Semantic: %d | Final: %d | Types: %s",
+            "Query: %r | Gen: %d | Excluded: %s | Summary: %d | NameMatch: %d | Semantic: %d | Final: %d | Types: %s",
             retrieval_query[:80],
             generation,
             excluded,
-            len([d for d in final_docs
-                 if (d.metadata.get("entity_type", ""), d.metadata.get("name_en", ""), d.metadata.get("generation", ""))
-                 in seen_keys]),
+            len(summary_docs),
+            len(exact_docs),
             len(semantic_docs),
             len(final_docs),
             [d.metadata.get("entity_type", "?") for d in final_docs],

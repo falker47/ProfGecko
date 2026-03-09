@@ -55,6 +55,9 @@ _STOPWORDS: frozenset[str] = frozenset({
     "confronta", "confronto", "vincerebbe", "scontro", "meglio",
     "funziona", "funzionano", "impara", "apprende", "possiede",
     "cos",  # from "cos'è" (tokenized as "cos" + "è")
+    # Italian — strategic advice verbs / modifiers
+    "consiglio", "consigli", "consigliata", "consigliato", "consiglia",
+    "conviene", "scegliere", "usare", "sfruttare",
     # Italian — generic adjectives / nouns in questions
     "forte", "buono", "buona", "bene", "male",
     "info", "informazioni", "effetto",

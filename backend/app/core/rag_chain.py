@@ -10,7 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app.core.cache import ResponseCache
 from app.core.generation_mapper import LATEST_GENERATION, detect_generation
-from app.core.prompts import PROF_GALLADE_SYSTEM_PROMPT
+from app.core.prompts import PROF_GALLADE_SYSTEM_PROMPT, PROF_GALLADE_STRATEGIC_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,12 @@ _STOP_WORDS = frozenset({
     "parlami", "dimmi", "mostrami", "spiegami", "descrivi", "elenca",
     "confronta", "confronto", "vincerebbe", "scontro", "meglio",
     "impara", "apprende", "evolve",
+    # Strategic query terms
+    "squadra", "team", "build", "set", "moveset", "starter",
+    "consiglio", "consigli", "consigliata", "consigliato", "consiglia",
+    "strategia", "competitivo", "counter", "contrastare",
+    "avventura", "conviene", "alternativa", "alternative",
+    "vantaggi", "svantaggi",
     # Termini Pokemon generici
     "pokemon", "pokémon",
     "tipo", "tipi", "mossa", "mosse", "abilita", "stat", "statistiche",
@@ -138,6 +144,36 @@ def _detect_excluded_types(question: str) -> list[str]:
     return excluded
 
 
+# --- Strategic query detection ---
+_STRATEGIC_KEYWORDS: list[str] = [
+    # Team building
+    "squadra", "team", "roster", "composizione",
+    # Build / moveset
+    "build", "moveset", "miglior set",
+    # Advice
+    "consigliata", "consigliato", "consigli", "consiglio", "consiglia",
+    # Starter
+    "starter", "iniziale", "quale scegliere",
+    # Strategy
+    "strategia", "competitivo", "competitive",
+    "counter", "contrastare",
+    # Usage
+    "come usare", "come si usa", "come sfruttare",
+    "conviene", "vale la pena",
+    # Pros / cons
+    "pro e contro", "vantaggi", "svantaggi",
+    "alternativa", "alternative",
+    # In-game playthrough
+    "avventura", "playthrough", "completare",
+]
+
+
+def _is_strategic_query(question: str) -> bool:
+    """Detect if a question requires strategic reasoning (builds, teams, advice)."""
+    q = question.lower()
+    return any(kw in q for kw in _STRATEGIC_KEYWORDS)
+
+
 def _extract_candidate_names(question: str) -> list[str]:
     """Estrae parole candidate come nomi di entita dalla domanda.
 
@@ -184,6 +220,12 @@ class RAGChain:
 
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", PROF_GALLADE_SYSTEM_PROMPT),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{question}"),
+        ])
+
+        self.strategic_prompt = ChatPromptTemplate.from_messages([
+            ("system", PROF_GALLADE_STRATEGIC_PROMPT),
             MessagesPlaceholder("chat_history"),
             ("human", "{question}"),
         ])
@@ -336,11 +378,38 @@ class RAGChain:
             )
         return found_docs
 
+    def _find_summaries_by_category(
+        self, category: str, generation: int,
+    ) -> list[Document]:
+        """Fetch a specific summary category directly (for strategic fallback)."""
+        collection = self.vectorstore._collection
+        try:
+            results = collection.get(
+                where={
+                    "$and": [
+                        {"generation": generation},
+                        {"entity_type": "summary"},
+                        {"summary_category": category},
+                    ],
+                },
+                include=["documents", "metadatas"],
+            )
+        except Exception:
+            return []
+        docs = []
+        for j, doc_id in enumerate(results["ids"]):
+            docs.append(Document(
+                page_content=results["documents"][j],
+                metadata=results["metadatas"][j],
+            ))
+        return docs
+
     def _retrieve(
         self,
         retrieval_query: str,
         generation: int,
         original_question: str,
+        is_strategic: bool = False,
     ) -> list[Document]:
         """Recupera documenti con strategia ibrida a 3 fasi.
 
@@ -350,9 +419,20 @@ class RAGChain:
            (risolve l'embedding dilution dei documenti lunghi)
         3. Semantic search: riempie i posti rimanenti con risultati
            semanticamente rilevanti (cattura contesto aggiuntivo)
+
+        Per domande strategiche (build, squadra, consigli): k viene aumentato
+        di 6 per fornire più contesto al LLM.
         """
+        effective_k = self.k + 6 if is_strategic else self.k
+
         # Phase 0: summary document matching per domande analitiche
         summary_docs = self._find_summaries(original_question, generation)
+
+        # Per domande strategiche senza summary match, inietta il roster BST
+        if is_strategic and not summary_docs:
+            summary_docs = self._find_summaries_by_category(
+                "bst_ranking_non_legendary", generation,
+            )
 
         # Phase 1: exact name matching sui metadata
         # Usa sia la domanda originale che la retrieval_query arricchita
@@ -368,7 +448,7 @@ class RAGChain:
         ]
 
         # Phase 2: semantic search per contesto aggiuntivo
-        remaining_k = max(self.k - len(pre_docs), 3)
+        remaining_k = max(effective_k - len(pre_docs), 3)
         excluded = _detect_excluded_types(original_question)
 
         if excluded:
@@ -409,12 +489,13 @@ class RAGChain:
                 seen_keys.add(key)
                 pre_docs.append(doc)
 
-        final_docs = pre_docs[:self.k]
+        final_docs = pre_docs[:effective_k]
 
         logger.info(
-            "Query: %r | Gen: %d | Excluded: %s | Summary: %d | NameMatch: %d | Semantic: %d | Final: %d | Types: %s",
+            "Query: %r | Gen: %d | Strategic: %s | Excluded: %s | Summary: %d | NameMatch: %d | Semantic: %d | Final: %d | Types: %s",
             retrieval_query[:80],
             generation,
+            is_strategic,
             excluded,
             len(summary_docs),
             len(exact_docs),
@@ -461,12 +542,17 @@ class RAGChain:
     ) -> str:
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
+        is_strategic = _is_strategic_query(question)
         retrieval_query = self._build_retrieval_query(question, history_list)
-        docs = self._retrieve(retrieval_query, generation, original_question=question)
+        docs = self._retrieve(
+            retrieval_query, generation,
+            original_question=question, is_strategic=is_strategic,
+        )
         context = _format_docs(docs)
         history = _convert_chat_history(history_list)
 
-        chain = self.prompt | self.llm | self.output_parser
+        selected_prompt = self.strategic_prompt if is_strategic else self.prompt
+        chain = selected_prompt | self.llm | self.output_parser
         return chain.invoke({
             "question": question,
             "context": context,
@@ -481,12 +567,17 @@ class RAGChain:
     ) -> str:
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
+        is_strategic = _is_strategic_query(question)
         retrieval_query = self._build_retrieval_query(question, history_list)
-        docs = self._retrieve(retrieval_query, generation, original_question=question)
+        docs = self._retrieve(
+            retrieval_query, generation,
+            original_question=question, is_strategic=is_strategic,
+        )
         context = _format_docs(docs)
         history = _convert_chat_history(history_list)
 
-        chain = self.prompt | self.llm | self.output_parser
+        selected_prompt = self.strategic_prompt if is_strategic else self.prompt
+        chain = selected_prompt | self.llm | self.output_parser
         return await chain.ainvoke({
             "question": question,
             "context": context,
@@ -501,10 +592,16 @@ class RAGChain:
     ):
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
+        is_strategic = _is_strategic_query(question)
         retrieval_query = self._build_retrieval_query(question, history_list)
-        docs = self._retrieve(retrieval_query, generation, original_question=question)
+        docs = self._retrieve(
+            retrieval_query, generation,
+            original_question=question, is_strategic=is_strategic,
+        )
         context = _format_docs(docs)
         history = _convert_chat_history(history_list)
+
+        selected_prompt = self.strategic_prompt if is_strategic else self.prompt
 
         invoke_args = {
             "question": question,
@@ -514,7 +611,7 @@ class RAGChain:
         }
 
         # Try primary LLM, fallback on 429 / quota errors
-        chain = self.prompt | self.llm | self.output_parser
+        chain = selected_prompt | self.llm | self.output_parser
         try:
             async for chunk in chain.astream(invoke_args):
                 yield chunk
@@ -526,7 +623,7 @@ class RAGChain:
                 raise
 
         # Fallback LLM
-        fallback_chain = self.prompt | self.fallback_llm | self.output_parser
+        fallback_chain = selected_prompt | self.fallback_llm | self.output_parser
         async for chunk in fallback_chain.astream(invoke_args):
             yield chunk
 

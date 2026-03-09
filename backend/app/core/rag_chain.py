@@ -110,6 +110,10 @@ _SUMMARY_KEYWORD_MAP: list[tuple[list[str], list[str]]] = [
          "tipo piu raro", "tipi piu comuni"],
         ["type_distribution"],
     ),
+    (
+        ["squadra", "team", "roster", "composizione"],
+        ["team_roster_by_role"],
+    ),
 ]
 
 

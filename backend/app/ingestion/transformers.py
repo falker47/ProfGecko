@@ -890,6 +890,406 @@ def build_summary_documents(
     return docs
 
 
+# --- Build / Strategy Documents ---
+
+# Before Gen 4, physical/special was determined by type, not by move.
+_PHYSICAL_TYPES_PRE_GEN4 = frozenset({
+    "normal", "fighting", "poison", "ground", "flying",
+    "bug", "rock", "ghost", "steel",
+})
+
+# Notable status moves to prioritize in build documents.
+_PRIORITY_STATUS_SLUGS = frozenset({
+    # Setup
+    "swords-dance", "dragon-dance", "calm-mind", "nasty-plot",
+    "bulk-up", "shell-smash", "quiver-dance", "iron-defense",
+    "agility", "rock-polish", "shift-gear", "coil", "tail-glow",
+    "cotton-guard", "cosmic-power", "amnesia", "barrier",
+    "autotomize", "belly-drum", "curse", "growth", "hone-claws",
+    "work-up", "no-retreat",
+    # Recovery
+    "recover", "roost", "soft-boiled", "slack-off",
+    "synthesis", "morning-sun", "moonlight", "rest",
+    "shore-up", "strength-sap", "wish",
+    # Hazards
+    "stealth-rock", "spikes", "toxic-spikes", "sticky-web",
+    # Status inflicting
+    "thunder-wave", "toxic", "will-o-wisp", "spore",
+    "sleep-powder", "hypnosis", "stun-spore", "glare", "yawn",
+    # Utility
+    "taunt", "protect", "substitute", "encore",
+    "defog", "heal-bell", "aromatherapy",
+    "trick", "switcheroo",
+    "whirlwind", "roar", "haze",
+    "trick-room", "tailwind",
+    "parting-shot", "memento",
+})
+
+
+def _get_effective_damage_class(
+    move_data: dict, move_type_en: str, generation: int,
+) -> str:
+    """Get the effective damage class for a generation.
+
+    Pre-Gen 4, damage class was determined by type:
+    - Physical: Normal, Fighting, Poison, Ground, Flying, Bug, Rock, Ghost, Steel
+    - Special: Fire, Water, Grass, Electric, Ice, Psychic, Dragon, Dark
+    """
+    base_class = move_data.get("damage_class", {}).get("name", "status")
+    if base_class == "status":
+        return "status"
+    if generation < 4:
+        return "physical" if move_type_en in _PHYSICAL_TYPES_PRE_GEN4 else "special"
+    return base_class
+
+
+def _classify_pokemon_role(
+    atk: int, sp_atk: int, defense: int, sp_def: int,
+    hp: int, speed: int,
+) -> tuple[str, str]:
+    """Classify a Pokemon's competitive role from base stats.
+
+    Returns (role_label_it, dominant_attack_type).
+    dominant_attack_type: "physical", "special", or "mixed".
+    """
+    if abs(atk - sp_atk) <= 15:
+        atk_type, atk_label = "mixed", "Misto"
+    elif atk > sp_atk:
+        atk_type, atk_label = "physical", "Fisico"
+    else:
+        atk_type, atk_label = "special", "Speciale"
+
+    best_off = max(atk, sp_atk)
+    bulk = (hp + defense + sp_def) / 3
+
+    if best_off >= 100 and speed >= 80:
+        return f"Sweeper {atk_label}", atk_type
+    if best_off >= 90 and bulk >= 90:
+        return f"Attaccante Bulky {atk_label}", atk_type
+    if bulk >= 100 and best_off < 80:
+        if defense >= sp_def + 20:
+            return "Wall Fisico", atk_type
+        if sp_def >= defense + 20:
+            return "Wall Speciale", atk_type
+        return "Wall Misto", atk_type
+    if best_off >= 80:
+        return f"Attaccante {atk_label}", atk_type
+    if speed >= 100:
+        return "Supporto Veloce", atk_type
+    return "Supporto", atk_type
+
+
+def _rank_pokemon_moves(
+    poke: dict,
+    move_by_slug: dict[str, dict],
+    generation: int,
+    type_name_it: dict[str, str],
+    move_name_it: dict[str, str],
+    pokemon_types_en: list[str],
+    dominant_atk: str,
+) -> tuple[list[dict], list[dict], list[str]]:
+    """Rank moves a Pokemon can learn in this generation.
+
+    Returns (stab_moves, coverage_moves, status_move_names).
+    stab/coverage sorted by effective_power = power * accuracy/100 * STAB_bonus.
+    status is a list of notable status move names (Italian).
+    """
+    seen: set[str] = set()
+    stab: list[dict] = []
+    coverage: list[dict] = []
+    status_names: list[str] = []
+
+    ok_classes = (
+        {"physical", "special"} if dominant_atk == "mixed"
+        else {dominant_atk}
+    )
+
+    for m in poke.get("moves", []):
+        slug = m["move"]["name"]
+        if slug in seen:
+            continue
+        for vgd in m.get("version_group_details", []):
+            vg = vgd["version_group"]["name"]
+            if _get_generation_for_move_version(vg) != generation:
+                continue
+            seen.add(slug)
+
+            md = move_by_slug.get(slug)
+            if not md:
+                break
+
+            stats = _reconstruct_move_stats(md, generation)
+            move_type = stats.get("type", "normal")
+            dmg_class = _get_effective_damage_class(md, move_type, generation)
+
+            if dmg_class == "status":
+                if slug in _PRIORITY_STATUS_SLUGS and len(status_names) < 3:
+                    it_name = move_name_it.get(
+                        slug, slug.replace("-", " ").title(),
+                    )
+                    status_names.append(it_name)
+                break
+
+            power = stats.get("power") or 0
+            accuracy = stats.get("accuracy") or 100
+            if power <= 0 or dmg_class not in ok_classes:
+                break
+
+            is_stab = move_type in pokemon_types_en
+            eff = power * (accuracy / 100) * (1.5 if is_stab else 1.0)
+
+            info = {
+                "name_it": move_name_it.get(
+                    slug, slug.replace("-", " ").title(),
+                ),
+                "type_it": type_name_it.get(move_type, move_type),
+                "power": power,
+                "accuracy": accuracy,
+                "effective": round(eff, 1),
+            }
+            if is_stab:
+                stab.append(info)
+            else:
+                coverage.append(info)
+            break
+
+    stab.sort(key=lambda x: x["effective"], reverse=True)
+    coverage.sort(key=lambda x: x["effective"], reverse=True)
+    return stab[:4], coverage[:5], status_names
+
+
+def build_pokemon_build_documents(
+    pokemon_data: dict[int, dict],
+    species_data: dict[int, dict],
+    moves_data: dict[int, dict],
+    all_types: dict[int, dict],
+    generation: int,
+    type_name_it: dict[str, str] | None = None,
+) -> list[Document]:
+    """Build one 'build' Document per Pokemon with BST >= 400.
+
+    Each document contains: role classification, top STAB moves,
+    top coverage moves, and notable status moves with effective
+    power calculations for team-building and build queries.
+    """
+    if type_name_it is None:
+        type_name_it = _build_type_name_lookup(all_types)
+
+    max_id = MAX_POKEMON_PER_GEN.get(generation, 1025)
+
+    move_name_it: dict[str, str] = {}
+    move_by_slug: dict[str, dict] = {}
+    for mv in moves_data.values():
+        slug = mv["name"]
+        it_name = _get_localized(mv.get("names", []), "it")
+        move_name_it[slug] = it_name or slug.replace("-", " ").title()
+        move_by_slug[slug] = mv
+
+    docs: list[Document] = []
+
+    for pid in range(1, max_id + 1):
+        poke = pokemon_data.get(pid)
+        spec = species_data.get(pid)
+        if not poke or not spec:
+            continue
+
+        hp = _get_stat(poke["stats"], "hp")
+        atk = _get_stat(poke["stats"], "attack")
+        defense = _get_stat(poke["stats"], "defense")
+        sp_atk = _get_stat(poke["stats"], "special-attack")
+        sp_def = _get_stat(poke["stats"], "special-defense")
+        speed = _get_stat(poke["stats"], "speed")
+        bst = hp + atk + defense + sp_atk + sp_def + speed
+
+        if bst < 400:
+            continue
+
+        name_it = _get_localized(spec.get("names", []), "it") or poke["name"]
+        name_en = poke["name"].capitalize()
+        types_en = _get_pokemon_types_for_gen(poke, generation)
+        types_it = [type_name_it.get(t, t) for t in types_en]
+        is_legendary = spec.get("is_legendary", False)
+        is_mythical = spec.get("is_mythical", False)
+
+        role, dominant_atk = _classify_pokemon_role(
+            atk, sp_atk, defense, sp_def, hp, speed,
+        )
+        stab, cov, status_names = _rank_pokemon_moves(
+            poke, move_by_slug, generation, type_name_it,
+            move_name_it, types_en, dominant_atk,
+        )
+
+        if dominant_atk == "special":
+            stat_line = f"Att.Sp: {sp_atk} | Attacco: {atk} | Velocita: {speed}"
+        else:
+            stat_line = f"Attacco: {atk} | Att.Sp: {sp_atk} | Velocita: {speed}"
+
+        sections = [
+            f"Build consigliata: {name_it}",
+            f"Generazione: {generation} | Ruolo: {role} | Tipi: {'/'.join(types_it)}",
+            f"{stat_line} | BST: {bst}",
+        ]
+
+        if stab:
+            cls = ""
+            if dominant_atk == "physical":
+                cls = " (fisiche)"
+            elif dominant_atk == "special":
+                cls = " (speciali)"
+            sections.append("")
+            sections.append(f"Migliori mosse STAB{cls}:")
+            for mv in stab:
+                sections.append(
+                    f"- {mv['name_it']}: {mv['type_it']}, "
+                    f"{mv['power']} pot, {mv['accuracy']}% "
+                    f"(eff: {mv['effective']})"
+                )
+
+        if cov:
+            sections.append("")
+            sections.append("Migliori mosse copertura:")
+            for mv in cov:
+                sections.append(
+                    f"- {mv['name_it']}: {mv['type_it']}, "
+                    f"{mv['power']} pot, {mv['accuracy']}% "
+                    f"(eff: {mv['effective']})"
+                )
+
+        if status_names:
+            sections.append("")
+            sections.append("Mosse stato utili:")
+            for name in status_names:
+                sections.append(f"- {name}")
+
+        page_content = "\n".join(sections)
+
+        metadata = {
+            "entity_type": "build",
+            "pokemon_id": pid,
+            "name_en": name_en.lower(),
+            "name_it": name_it.lower(),
+            "generation": generation,
+            "bst": bst,
+            "role": role,
+            "is_legendary": is_legendary,
+            "is_mythical": is_mythical,
+        }
+        docs.append(Document(page_content=page_content, metadata=metadata))
+
+    return docs
+
+
+def build_team_roster_documents(
+    pokemon_data: dict[int, dict],
+    species_data: dict[int, dict],
+    all_types: dict[int, dict],
+    generation: int,
+    type_name_it: dict[str, str] | None = None,
+) -> list[Document]:
+    """Build team roster summary document per generation.
+
+    Lists top Pokemon per role (Sweeper, Wall, Attaccante Bulky,
+    Supporto) for team-building queries.
+    """
+    if type_name_it is None:
+        type_name_it = _build_type_name_lookup(all_types)
+
+    poke_list = _build_pokemon_stat_list(
+        pokemon_data, species_data, all_types, generation, type_name_it,
+    )
+
+    viable: list[dict] = []
+    for p in poke_list:
+        if p["bst"] < 400:
+            continue
+        role, _ = _classify_pokemon_role(
+            p["atk"], p["sp_atk"], p["defense"], p["sp_def"],
+            p["hp"], p["speed"],
+        )
+        p["role"] = role
+        viable.append(p)
+
+    role_order = [
+        "Sweeper Fisico", "Sweeper Speciale", "Sweeper Misto",
+        "Attaccante Bulky", "Wall / Tank", "Supporto",
+    ]
+    role_groups: dict[str, list[dict]] = {r: [] for r in role_order}
+
+    for p in viable:
+        r = p["role"]
+        if "Sweeper" in r and "Fisico" in r:
+            role_groups["Sweeper Fisico"].append(p)
+        elif "Sweeper" in r and "Speciale" in r:
+            role_groups["Sweeper Speciale"].append(p)
+        elif "Sweeper" in r and "Misto" in r:
+            role_groups["Sweeper Misto"].append(p)
+        elif "Attaccante" in r:
+            role_groups["Attaccante Bulky"].append(p)
+        elif "Wall" in r:
+            role_groups["Wall / Tank"].append(p)
+        else:
+            role_groups["Supporto"].append(p)
+
+    for group in role_groups.values():
+        group.sort(key=lambda p: p["bst"], reverse=True)
+
+    sections = [
+        f"Pokemon consigliati per ruolo - Generazione {generation}",
+        "",
+    ]
+
+    for role_name in role_order:
+        pokes = role_groups[role_name]
+        non_legends = [
+            p for p in pokes
+            if not p["is_legendary"] and not p["is_mythical"]
+        ]
+        if not non_legends:
+            continue
+        sections.append(f"{role_name} (non leggendari):")
+        for p in non_legends[:5]:
+            types_str = "/".join(p["types_it"])
+            if "Speciale" in role_name:
+                sections.append(
+                    f"- {p['name_it']}: {types_str}, Att.Sp {p['sp_atk']}, "
+                    f"Vel {p['speed']}, BST {p['bst']}"
+                )
+            elif "Wall" in role_name or "Supporto" in role_name:
+                sections.append(
+                    f"- {p['name_it']}: {types_str}, Dif {p['defense']}, "
+                    f"Dif.Sp {p['sp_def']}, HP {p['hp']}, BST {p['bst']}"
+                )
+            else:
+                sections.append(
+                    f"- {p['name_it']}: {types_str}, Atk {p['atk']}, "
+                    f"Vel {p['speed']}, BST {p['bst']}"
+                )
+        sections.append("")
+
+    legends = [p for p in viable if p["is_legendary"] or p["is_mythical"]]
+    legends.sort(key=lambda p: p["bst"], reverse=True)
+    if legends:
+        sections.append("Leggendari / Mitici disponibili:")
+        for p in legends[:10]:
+            types_str = "/".join(p["types_it"])
+            tag = "Leggendario" if p["is_legendary"] else "Misterioso"
+            sections.append(
+                f"- {p['name_it']}: {types_str}, BST {p['bst']}, "
+                f"{p['role']} [{tag}]"
+            )
+
+    return [Document(
+        page_content="\n".join(sections),
+        metadata={
+            "entity_type": "summary",
+            "summary_category": "team_roster_by_role",
+            "name_en": "team roster by role",
+            "name_it": "pokemon consigliati per ruolo squadra",
+            "generation": generation,
+        },
+    )]
+
+
 # --- Move Documents ---
 
 
@@ -1301,6 +1701,23 @@ def build_all_documents_for_generation(
     ))
 
     docs.extend(build_summary_documents(
+        all_data["pokemon"],
+        all_data["species"],
+        all_data["types"],
+        generation,
+        type_name_it=type_name_it,
+    ))
+
+    docs.extend(build_pokemon_build_documents(
+        all_data["pokemon"],
+        all_data["species"],
+        all_data["moves"],
+        all_data["types"],
+        generation,
+        type_name_it=type_name_it,
+    ))
+
+    docs.extend(build_team_roster_documents(
         all_data["pokemon"],
         all_data["species"],
         all_data["types"],

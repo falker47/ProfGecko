@@ -259,16 +259,22 @@ export default function DuplicateGroups({
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<DuplicateGroupsResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   const fetchGroups = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const result = await getDuplicateGroups(secret, page);
       setData(result);
     } catch (err) {
       if (err instanceof Error && err.message === "AUTH_FAILED") {
         onAuthFailed();
+      } else {
+        const msg = err instanceof Error ? err.message : "Errore sconosciuto";
+        setError(msg);
+        console.error("DuplicateGroups fetch error:", err);
       }
     } finally {
       setLoading(false);
@@ -305,7 +311,11 @@ export default function DuplicateGroups({
 
       {isOpen && (
         <div className="border-t border-gray-200 px-4 py-4">
-          {loading && !data ? (
+          {error ? (
+            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+              Errore: {error}
+            </div>
+          ) : loading && !data ? (
             <p className="py-6 text-center text-sm text-gray-400">
               Caricamento...
             </p>

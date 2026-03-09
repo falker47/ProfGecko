@@ -74,9 +74,14 @@ async def chat_stream(
         except Exception as exc:
             import logging
             logging.getLogger(__name__).exception("LLM streaming error")
+            err_str = str(exc)
+            if "429" in err_str or "quota" in err_str.lower():
+                user_msg = "Il servizio AI ha raggiunto il limite di richieste. Riprova tra qualche minuto."
+            else:
+                user_msg = "Errore nella generazione della risposta. Riprova tra poco."
             yield {
                 "event": "error",
-                "data": json.dumps({"error": str(exc)}),
+                "data": json.dumps({"error": user_msg}),
             }
             return
 

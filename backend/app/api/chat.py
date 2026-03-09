@@ -87,7 +87,7 @@ async def chat_stream(
                 user_msg = "Errore nella generazione della risposta. Riprova tra poco."
             yield {
                 "event": "error",
-                "data": json.dumps({"error": user_msg}),
+                "data": json.dumps({"error": user_msg, "_debug": err_str[:500]}),
             }
             return
 

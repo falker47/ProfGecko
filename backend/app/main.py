@@ -25,6 +25,7 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log = logging.getLogger(__name__)
     settings = get_settings()
 
     # Initialize embeddings + vector store
@@ -32,16 +33,34 @@ async def lifespan(app: FastAPI):
         settings.embedding_provider,
         model=settings.embedding_model,
     )
-    vectorstore = get_vectorstore(
-        settings.chroma_persist_dir,
-        settings.chroma_collection_name,
-        embeddings,
-    )
-    doc_count = vectorstore._collection.count()
-    logging.getLogger(__name__).info(
-        "Vectorstore loaded: %d documents in '%s'",
-        doc_count, settings.chroma_collection_name,
-    )
+
+    try:
+        vectorstore = get_vectorstore(
+            settings.chroma_persist_dir,
+            settings.chroma_collection_name,
+            embeddings,
+        )
+        doc_count = vectorstore._collection.count()
+        log.info(
+            "Vectorstore loaded: %d documents in '%s'",
+            doc_count, settings.chroma_collection_name,
+        )
+    except Exception:
+        log.exception("Failed to load vectorstore — starting with empty store")
+        # Delete corrupted collection and create a fresh one
+        import chromadb
+        try:
+            client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+            client.delete_collection(name=settings.chroma_collection_name)
+            log.info("Deleted corrupted collection '%s'", settings.chroma_collection_name)
+        except Exception:
+            pass
+        vectorstore = get_vectorstore(
+            settings.chroma_persist_dir,
+            settings.chroma_collection_name,
+            embeddings,
+        )
+        log.info("Created empty vectorstore — run /api/admin/ingest to populate")
 
     # Initialize LLM (primary + fallback)
     llm = get_llm(
@@ -56,7 +75,7 @@ async def lifespan(app: FastAPI):
             model=settings.llm_fallback_model,
             temperature=settings.llm_temperature,
         )
-        logging.getLogger(__name__).info(
+        log.info(
             "LLM fallback: %s → %s",
             settings.llm_model, settings.llm_fallback_model,
         )

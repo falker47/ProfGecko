@@ -16,9 +16,9 @@ function SkeletonCard() {
 }
 
 const CARDS = [
-  { key: "total_entries", label: "Totale Voci", color: "text-emerald-600" },
-  { key: "total_hits", label: "Hit Totali", color: "text-blue-600" },
-  { key: "reviewed_entries", label: "Revisionate", color: "text-amber-600" },
+  { key: "total_entries", label: "Totale Voci", color: "text-blue-600" },
+  { key: "total_hits", label: "Hit Totali", color: "text-amber-600" },
+  { key: "reviewed_entries", label: "Revisionate", color: "text-emerald-600" },
 ] as const;
 
 export default function StatsCards({ stats }: StatsCardsProps) {

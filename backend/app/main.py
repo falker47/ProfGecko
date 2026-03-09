@@ -38,12 +38,23 @@ async def lifespan(app: FastAPI):
         embeddings,
     )
 
-    # Initialize LLM
+    # Initialize LLM (primary + fallback)
     llm = get_llm(
         settings.llm_provider,
         model=settings.llm_model,
         temperature=settings.llm_temperature,
     )
+    fallback_llm = None
+    if settings.llm_fallback_model and settings.llm_fallback_model != settings.llm_model:
+        fallback_llm = get_llm(
+            settings.llm_provider,
+            model=settings.llm_fallback_model,
+            temperature=settings.llm_temperature,
+        )
+        logging.getLogger(__name__).info(
+            "LLM fallback: %s → %s",
+            settings.llm_model, settings.llm_fallback_model,
+        )
 
     # Build RAG chain
     app.state.vectorstore = vectorstore
@@ -51,6 +62,7 @@ async def lifespan(app: FastAPI):
         llm=llm,
         vectorstore=vectorstore,
         k=settings.retriever_k,
+        fallback_llm=fallback_llm,
     )
 
     # Initialize user database

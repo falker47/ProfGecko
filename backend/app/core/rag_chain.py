@@ -107,8 +107,15 @@ def _convert_chat_history(
 class RAGChain:
     """RAG chain with generation-aware retrieval."""
 
-    def __init__(self, llm: BaseChatModel, vectorstore: Chroma, k: int = 5):
+    def __init__(
+        self,
+        llm: BaseChatModel,
+        vectorstore: Chroma,
+        k: int = 5,
+        fallback_llm: BaseChatModel | None = None,
+    ):
         self.llm = llm
+        self.fallback_llm = fallback_llm
         self.vectorstore = vectorstore
         self.k = k
 
@@ -373,13 +380,28 @@ class RAGChain:
         context = _format_docs(docs)
         history = _convert_chat_history(history_list)
 
-        chain = self.prompt | self.llm | self.output_parser
-        async for chunk in chain.astream({
+        invoke_args = {
             "question": question,
             "context": context,
             "generation": generation,
             "chat_history": history,
-        }):
+        }
+
+        # Try primary LLM, fallback on 429 / quota errors
+        chain = self.prompt | self.llm | self.output_parser
+        try:
+            async for chunk in chain.astream(invoke_args):
+                yield chunk
+            return
+        except Exception as exc:
+            if self.fallback_llm and ("429" in str(exc) or "quota" in str(exc).lower()):
+                logger.warning("Primary LLM quota exceeded, falling back: %s", str(exc)[:120])
+            else:
+                raise
+
+        # Fallback LLM
+        fallback_chain = self.prompt | self.fallback_llm | self.output_parser
+        async for chunk in fallback_chain.astream(invoke_args):
             yield chunk
 
     async def astream_cached(

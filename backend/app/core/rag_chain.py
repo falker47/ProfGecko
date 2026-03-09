@@ -413,8 +413,13 @@ class RAGChain:
         # OR if it's self-contained (>= 6 words, meaning doesn't depend
         # on chat history). Short follow-ups like "e le mosse?" are
         # context-dependent and cannot be meaningfully cached.
+        #
+        # NOTE: history_list may contain the current user message itself
+        # (sent by the frontend). We check for prior *assistant* messages
+        # to determine if there's actual conversation context.
         word_count = len(question.split())
-        is_cacheable = not history_list or word_count >= _SELF_CONTAINED_WORD_COUNT
+        has_prior_context = any(m["role"] == "assistant" for m in history_list)
+        is_cacheable = not has_prior_context or word_count >= _SELF_CONTAINED_WORD_COUNT
 
         if cache and is_cacheable:
             cached = await cache.get(question, generation)

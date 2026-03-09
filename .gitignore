@@ -23,7 +23,11 @@ frontend/.env.local
 .DS_Store
 Thumbs.db
 
-.csv
+*.csv
+
+# Temp dumps / debug scripts
+cache_*.json
+analyze_cache.py
 
 # Claude
 .claude

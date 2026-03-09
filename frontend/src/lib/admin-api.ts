@@ -8,6 +8,7 @@ import type {
   StopwordsResponse,
   AddStopwordsResult,
   RemoveStopwordResult,
+  DuplicateGroupsResponse,
 } from "./admin-types";
 
 // ── Helper ────────────────────────────────────────────────────────
@@ -220,6 +221,23 @@ export async function removeStopword(
     `/api/admin/cache/stopwords/${encodeURIComponent(word)}`,
     { method: "DELETE" },
   );
+  return res.json();
+}
+
+// ── Duplicate groups ─────────────────────────────────────────────
+
+export async function getDuplicateGroups(
+  secret: string,
+  page: number = 1,
+  generation: number | null = null,
+): Promise<DuplicateGroupsResponse> {
+  const params: Record<string, string> = { page: String(page) };
+  if (generation !== null) {
+    params.generation = String(generation);
+  }
+  const res = await adminFetch(secret, "/api/admin/cache/duplicates", {
+    params,
+  });
   return res.json();
 }
 

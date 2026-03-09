@@ -67,6 +67,33 @@ export interface RemoveStopwordResult {
   entries_rehashed: number;
 }
 
+// ── Duplicate groups ─────────────────────────────────────────────
+
+export interface DuplicateEntry {
+  id: number;
+  question: string;
+  hit_count: number;
+  reviewed: boolean;
+  feedback: string;
+  created_at: string;
+}
+
+export interface DuplicateGroup {
+  normal_hash: string;
+  generation: number;
+  final_tokens: string[];
+  entries: DuplicateEntry[];
+}
+
+export interface DuplicateGroupsResponse {
+  groups: DuplicateGroup[];
+  total_groups: number;
+  page: number;
+  per_page: number;
+}
+
+// ── Sorting & filters ────────────────────────────────────────────
+
 export type SortColumn = "id" | "generation" | "created_at" | "hit_count";
 export type SortOrder = "asc" | "desc";
 

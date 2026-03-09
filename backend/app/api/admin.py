@@ -309,6 +309,28 @@ async def cache_rehash(
     }
 
 
+@router.get("/cache/duplicates")
+async def cache_duplicates(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+    generation: int | None = Query(None, description="Filter by generation"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+):
+    """List groups of cache entries that share the same normalized hash.
+
+    Useful for finding and cleaning up duplicate entries, or identifying
+    stopwords that incorrectly cause different questions to hash equally.
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    return await cache.list_duplicate_groups(
+        generation=generation, page=page, per_page=per_page,
+    )
+
+
 @router.get("/cache/stopwords")
 async def list_stopwords(
     request: Request,

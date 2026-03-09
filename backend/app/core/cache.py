@@ -282,8 +282,13 @@ def _split_gen_tokens(tokens: list[str]) -> list[str]:
     return result
 
 
-def _normal_hash(question: str) -> str:
-    """Level 2: normalize + strip gen refs + remove stopwords + sort → SHA-256."""
+def _compute_final_tokens(question: str) -> list[str]:
+    """Compute the normalized, sorted, deduplicated tokens for a question.
+
+    This is the core normalization logic shared by _normal_hash and
+    the duplicate-groups endpoint. Returns the list of tokens that
+    form the hash input.
+    """
     tokens = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", question.lower())
 
     # Step 0: split aggregated gen tokens (gen4 → gen + 4)
@@ -300,9 +305,6 @@ def _normal_hash(question: str) -> str:
     tokens = [_STRATEGIC_SYNONYM_MAP.get(t, t) for t in tokens]
 
     # Step 3: find generation-adjacent numbers and mark for removal.
-    # Generation is already stored as a separate column, so the
-    # number in the question (e.g. "gen 5", "quinta generazione")
-    # must NOT appear in the hash.
     gen_number_indices: set[int] = set()
     for i, t in enumerate(tokens):
         if t in _GEN_KEYWORDS:
@@ -311,16 +313,12 @@ def _normal_hash(question: str) -> str:
             if i + 1 < len(tokens) and tokens[i + 1].isdigit():
                 gen_number_indices.add(i + 1)
 
-    # Step 3c: conditional game title tokens — strip words only when
-    # adjacent to their companion (e.g. "fuoco" only next to "rosso").
+    # Step 3c: conditional game title tokens
     conditional_indices = _find_conditional_indices(tokens)
 
-    # Step 4: filter stopwords, game titles, conditional, short tokens, gen-numbers
-    # Also includes custom stopwords added via admin panel.
-    # sorted(set(...)) deduplicates canonical tokens (e.g. "consigliami miglior"
-    # both map to _consiglio_ but we only need it once in the hash).
+    # Step 4: filter and deduplicate
     all_stopwords = _STOPWORDS | _custom_stopwords
-    filtered = sorted(set(
+    return sorted(set(
         t for i, t in enumerate(tokens)
         if t not in all_stopwords
         and t not in _GAME_TITLE_STOPWORDS
@@ -329,6 +327,10 @@ def _normal_hash(question: str) -> str:
         and i not in conditional_indices
     ))
 
+
+def _normal_hash(question: str) -> str:
+    """Level 2: normalize + strip gen refs + remove stopwords + sort → SHA-256."""
+    filtered = _compute_final_tokens(question)
     key = " ".join(filtered)
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
@@ -818,6 +820,92 @@ class ResponseCache:
             "updated": updated,
             "duplicates_found": len(duplicates),
             "duplicates": duplicates,
+        }
+
+    # ── Duplicate groups ────────────────────────────────────────
+
+    async def list_duplicate_groups(
+        self,
+        generation: int | None = None,
+        page: int = 1,
+        per_page: int = 20,
+    ) -> dict:
+        """Find groups of entries that share the same (normal_hash, generation).
+
+        Returns groups with their entries and the final tokens that produced
+        the shared hash, so the admin can decide if they're true duplicates
+        or false positives caused by incorrect stopword removal.
+        """
+        # Step 1: find hashes with more than 1 entry
+        gen_clause = "AND generation = ?" if generation else ""
+        gen_params: tuple = (generation,) if generation else ()
+
+        count_cursor = await self._db.execute(
+            f"""SELECT COUNT(*) FROM (
+                SELECT normal_hash, generation
+                FROM response_cache
+                WHERE 1=1 {gen_clause}
+                GROUP BY normal_hash, generation
+                HAVING COUNT(*) > 1
+            )""",
+            gen_params,
+        )
+        total_groups = (await count_cursor.fetchone())[0]
+
+        offset = (page - 1) * per_page
+        group_cursor = await self._db.execute(
+            f"""SELECT normal_hash, generation, COUNT(*) as cnt
+                FROM response_cache
+                WHERE 1=1 {gen_clause}
+                GROUP BY normal_hash, generation
+                HAVING COUNT(*) > 1
+                ORDER BY cnt DESC, generation ASC
+                LIMIT ? OFFSET ?""",
+            gen_params + (per_page, offset),
+        )
+        group_rows = await group_cursor.fetchall()
+
+        # Step 2: for each group, fetch its entries
+        groups = []
+        for g in group_rows:
+            nhash, gen, cnt = g[0], g[1], g[2]
+            entries_cursor = await self._db.execute(
+                """SELECT id, question, hit_count, reviewed, feedback, created_at
+                   FROM response_cache
+                   WHERE normal_hash = ? AND generation = ?
+                   ORDER BY hit_count DESC, id ASC""",
+                (nhash, gen),
+            )
+            entry_rows = await entries_cursor.fetchall()
+
+            # Compute final tokens from the first entry's question
+            final_tokens = _compute_final_tokens(entry_rows[0][1]) if entry_rows else []
+
+            entries = [
+                {
+                    "id": r[0],
+                    "question": r[1],
+                    "hit_count": r[2],
+                    "reviewed": bool(r[3]),
+                    "feedback": r[4],
+                    "created_at": r[5],
+                }
+                for r in entry_rows
+            ]
+
+            groups.append({
+                "normal_hash": nhash[:16],
+                "generation": gen,
+                "count": cnt,
+                "final_tokens": final_tokens,
+                "entries": entries,
+            })
+
+        return {
+            "groups": groups,
+            "total_groups": total_groups,
+            "page": page,
+            "per_page": per_page,
         }
 
     # ── Export ────────────────────────────────────────────────────

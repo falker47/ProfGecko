@@ -7,6 +7,7 @@ import StatsCards from "./StatsCards";
 import AdminActions from "./AdminActions";
 import EntriesTable from "./EntriesTable";
 import DebugTool from "./DebugTool";
+import DuplicateGroups from "./DuplicateGroups";
 import StopwordsManager from "./StopwordsManager";
 
 interface AdminDashboardProps {
@@ -73,6 +74,12 @@ export default function AdminDashboard({
           secret={secret}
           onAction={handleRefresh}
           onAuthFailed={onAuthFailed}
+        />
+        <DuplicateGroups
+          secret={secret}
+          onChanged={handleRefresh}
+          onAuthFailed={onAuthFailed}
+          refreshKey={refreshKey}
         />
         <DebugTool secret={secret} onAuthFailed={onAuthFailed} />
         <EntriesTable

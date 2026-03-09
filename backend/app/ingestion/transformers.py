@@ -400,19 +400,20 @@ def build_pokemon_documents(
             slug = ab["name"]  # e.g. "inner-focus"
             it_name = _get_localized(ab.get("names", []), "it")
             ability_name_it[slug] = it_name or slug.replace("-", " ").title()
-            # Effect description (IT with EN fallback)
-            effect = ""
-            for ee in ab.get("effect_entries", []):
-                if ee.get("language", {}).get("name") == "it":
-                    effect = ee.get("short_effect", ee.get("effect", ""))
-                    break
-            if not effect:
+            # Effect description: flavor_text IT → effect_entries IT → effect_entries EN
+            desc = _get_flavor_text(ab.get("flavor_text_entries", []), "it")
+            if not desc:
+                for ee in ab.get("effect_entries", []):
+                    if ee.get("language", {}).get("name") == "it":
+                        desc = ee.get("short_effect", ee.get("effect", ""))
+                        break
+            if not desc:
                 for ee in ab.get("effect_entries", []):
                     if ee.get("language", {}).get("name") == "en":
-                        effect = ee.get("short_effect", ee.get("effect", ""))
+                        desc = ee.get("short_effect", ee.get("effect", ""))
                         break
-            if effect:
-                ability_effect_it[slug] = effect
+            if desc:
+                ability_effect_it[slug] = desc
 
     # Build species name lookup (slug -> IT name) for evolution chains
     species_name_it: dict[str, str] = {}

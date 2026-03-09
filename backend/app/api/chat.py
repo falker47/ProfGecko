@@ -77,8 +77,8 @@ async def chat_stream(
             err_str = str(exc)
             # Extract model name from error for debugging
             model_hint = ""
-            if "gemini-2.0" in err_str:
-                model_hint = " (fallback: gemini-2.0-flash)"
+            if "flash-lite" in err_str or "gemini-2.5-flash-lite" in err_str:
+                model_hint = " (fallback: gemini-2.5-flash-lite)"
             elif "gemini-2.5" in err_str:
                 model_hint = " (primario: gemini-2.5-flash)"
             if "429" in err_str or "quota" in err_str.lower():
@@ -87,7 +87,7 @@ async def chat_stream(
                 user_msg = "Errore nella generazione della risposta. Riprova tra poco."
             yield {
                 "event": "error",
-                "data": json.dumps({"error": user_msg, "_debug": err_str[:500]}),
+                "data": json.dumps({"error": user_msg}),
             }
             return
 

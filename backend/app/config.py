@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # LLM
     llm_provider: str = "gemini"
     llm_model: str = "gemini-2.5-flash"
-    llm_fallback_model: str = "gemini-2.0-flash"
+    llm_fallback_model: str = "gemini-2.5-flash-lite"
     llm_temperature: float = 0.3
 
     # Embeddings

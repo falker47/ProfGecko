@@ -189,11 +189,13 @@ async def cache_list_entries(
     generation: int | None = Query(None, ge=1, le=9),
     search: str | None = Query(None, description="Search in question text"),
     feedback: str | None = Query(None, description="Filter by feedback: V, F, M, or -"),
+    sort_by: str = Query("id", description="Column to sort by: id, generation, created_at, hit_count"),
+    sort_order: str = Query("desc", description="Sort direction: asc or desc"),
 ):
-    """List cache entries with pagination and filters.
+    """List cache entries with pagination, filters and sorting.
 
     Usage:
-        GET /api/admin/cache/entries?secret=...&page=1&reviewed=false&feedback=V
+        GET /api/admin/cache/entries?secret=...&page=1&sort_by=hit_count&sort_order=desc
     """
     if secret != request.app.state.jwt_secret:
         raise HTTPException(status_code=403, detail="Invalid secret")
@@ -206,6 +208,8 @@ async def cache_list_entries(
         generation=generation,
         search=search,
         feedback=feedback,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
 

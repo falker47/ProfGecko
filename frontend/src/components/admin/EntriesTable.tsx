@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getEntries } from "@/lib/admin-api";
-import type { EntriesFilters, EntriesResponse } from "@/lib/admin-types";
+import type {
+  EntriesFilters,
+  EntriesResponse,
+  SortColumn,
+  SortOrder,
+} from "@/lib/admin-types";
 import EntriesFilterBar from "./EntriesFilters";
 import EntryRow from "./EntryRow";
 import Pagination from "./Pagination";
@@ -20,7 +25,47 @@ const DEFAULT_FILTERS: EntriesFilters = {
   generation: null,
   search: "",
   feedback: null,
+  sort_by: "id",
+  sort_order: "desc",
 };
+
+/* ── Sortable column header ─────────────────────────────────────── */
+
+interface SortableThProps {
+  label: string;
+  column: SortColumn;
+  currentSort: SortColumn;
+  currentOrder: SortOrder;
+  onSort: (col: SortColumn) => void;
+  className?: string;
+}
+
+function SortableTh({
+  label,
+  column,
+  currentSort,
+  currentOrder,
+  onSort,
+  className = "",
+}: SortableThProps) {
+  const isActive = currentSort === column;
+  return (
+    <th
+      className={`px-3 py-2.5 select-none cursor-pointer hover:text-emerald-600 transition-colors ${className}`}
+      onClick={() => onSort(column)}
+      title={`Ordina per ${label}`}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <span className={`text-[10px] ${isActive ? "text-emerald-600" : "text-gray-300"}`}>
+          {isActive ? (currentOrder === "asc" ? "\u25B2" : "\u25BC") : "\u25B4\u25BE"}
+        </span>
+      </span>
+    </th>
+  );
+}
+
+/* ── Main table ─────────────────────────────────────────────────── */
 
 export default function EntriesTable({
   secret,
@@ -60,6 +105,19 @@ export default function EntriesTable({
     fetchData();
   }
 
+  function handleSort(column: SortColumn) {
+    setFilters((f) => {
+      const sameColumn = f.sort_by === column;
+      return {
+        ...f,
+        page: 1,
+        sort_by: column,
+        sort_order: sameColumn ? (f.sort_order === "asc" ? "desc" : "asc") : "desc",
+      };
+    });
+    setExpandedId(null);
+  }
+
   return (
     <div className="rounded-xl bg-white shadow-sm">
       <EntriesFilterBar filters={filters} onChange={setFilters} />
@@ -68,14 +126,40 @@ export default function EntriesTable({
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-gray-200 text-xs font-medium uppercase text-gray-500">
-              <th className="px-3 py-2.5">ID</th>
+              <SortableTh
+                label="ID"
+                column="id"
+                currentSort={filters.sort_by}
+                currentOrder={filters.sort_order}
+                onSort={handleSort}
+              />
               <th className="px-3 py-2.5">Domanda</th>
-              <th className="px-3 py-2.5 text-center">Gen</th>
+              <SortableTh
+                label="Gen"
+                column="generation"
+                currentSort={filters.sort_by}
+                currentOrder={filters.sort_order}
+                onSort={handleSort}
+                className="text-center"
+              />
               <th className="px-3 py-2.5">Risposta</th>
-              <th className="px-3 py-2.5 text-center">Hit</th>
+              <SortableTh
+                label="Hit"
+                column="hit_count"
+                currentSort={filters.sort_by}
+                currentOrder={filters.sort_order}
+                onSort={handleSort}
+                className="text-center"
+              />
               <th className="px-3 py-2.5 text-center">Rev.</th>
               <th className="px-3 py-2.5 text-center">FB</th>
-              <th className="px-3 py-2.5">Creata</th>
+              <SortableTh
+                label="Creata"
+                column="created_at"
+                currentSort={filters.sort_by}
+                currentOrder={filters.sort_order}
+                onSort={handleSort}
+              />
               <th className="px-3 py-2.5">Azioni</th>
             </tr>
           </thead>

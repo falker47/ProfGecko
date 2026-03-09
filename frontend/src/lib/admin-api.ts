@@ -68,6 +68,12 @@ export async function getEntries(
   if (filters.feedback !== null) {
     params.feedback = filters.feedback;
   }
+  if (filters.sort_by) {
+    params.sort_by = filters.sort_by;
+  }
+  if (filters.sort_order) {
+    params.sort_order = filters.sort_order;
+  }
   const res = await adminFetch(secret, "/api/admin/cache/entries", { params });
   return res.json();
 }

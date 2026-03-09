@@ -67,6 +67,9 @@ export interface RemoveStopwordResult {
   entries_rehashed: number;
 }
 
+export type SortColumn = "id" | "generation" | "created_at" | "hit_count";
+export type SortOrder = "asc" | "desc";
+
 export interface EntriesFilters {
   page: number;
   per_page: number;
@@ -74,4 +77,6 @@ export interface EntriesFilters {
   generation: number | null;
   search: string;
   feedback: string | null; // "V" | "F" | "M" | "-" | null (all)
+  sort_by: SortColumn;
+  sort_order: SortOrder;
 }

@@ -486,6 +486,9 @@ class ResponseCache:
 
     # ── List & Edit (admin review) ───────────────────────────────────
 
+    # Colonne ammesse per l'ordinamento (whitelist anti-SQL-injection)
+    _SORT_COLUMNS = {"id", "generation", "created_at", "hit_count"}
+
     async def list_entries(
         self,
         page: int = 1,
@@ -494,8 +497,10 @@ class ResponseCache:
         generation: int | None = None,
         search: str | None = None,
         feedback: str | None = None,
+        sort_by: str = "id",
+        sort_order: str = "desc",
     ) -> dict:
-        """List cache entries with pagination and optional filters."""
+        """List cache entries with pagination, filters and sorting."""
         conditions: list[str] = []
         params: list = []
 
@@ -518,6 +523,10 @@ class ResponseCache:
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
+        # Sanitize sort parameters
+        col = sort_by if sort_by in self._SORT_COLUMNS else "id"
+        direction = "ASC" if sort_order.lower() == "asc" else "DESC"
+
         # Total count
         cursor = await self._db.execute(
             f"SELECT COUNT(*) FROM response_cache {where}", params,
@@ -532,7 +541,7 @@ class ResponseCache:
                        reviewed, created_at, last_hit_at, reviewed_at,
                        exact_hash, normal_hash, feedback
                 FROM response_cache {where}
-                ORDER BY hit_count DESC, created_at DESC
+                ORDER BY {col} {direction}
                 LIMIT ? OFFSET ?""",
             [*params, per_page, offset],
         )

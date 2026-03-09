@@ -74,6 +74,7 @@ export default function AdminDashboard({
           onAction={handleRefresh}
           onAuthFailed={onAuthFailed}
         />
+        <DebugTool secret={secret} onAuthFailed={onAuthFailed} />
         <EntriesTable
           secret={secret}
           onAuthFailed={onAuthFailed}
@@ -85,7 +86,6 @@ export default function AdminDashboard({
           onAuthFailed={onAuthFailed}
           refreshKey={refreshKey}
         />
-        <DebugTool secret={secret} onAuthFailed={onAuthFailed} />
       </main>
     </div>
   );

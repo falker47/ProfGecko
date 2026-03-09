@@ -445,13 +445,13 @@ async def cache_export_csv(
     writer = csv.writer(output)
     writer.writerow([
         "id", "question", "generation", "response",
-        "hit_count", "reviewed", "exact_hash", "normal_hash",
+        "hit_count", "reviewed", "feedback", "exact_hash", "normal_hash",
         "created_at", "last_hit_at", "reviewed_at",
     ])
     for row in rows:
         writer.writerow([
             row["id"], row["question"], row["generation"], row["response"],
-            row["hit_count"], row["reviewed"], row["exact_hash"],
+            row["hit_count"], row["reviewed"], row["feedback"], row["exact_hash"],
             row["normal_hash"], row["created_at"], row["last_hit_at"],
             row["reviewed_at"],
         ])

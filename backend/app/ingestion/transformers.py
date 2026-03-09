@@ -591,6 +591,286 @@ Misterioso: {'Si' if is_mythical else 'No'}"""
     return docs
 
 
+# --- Summary / Ranking Documents ---
+
+
+def _build_pokemon_stat_list(
+    pokemon_data: dict[int, dict],
+    species_data: dict[int, dict],
+    all_types: dict[int, dict],
+    generation: int,
+    type_name_it: dict[str, str],
+) -> list[dict]:
+    """Build a list of stat dicts for all Pokemon available in a generation.
+
+    Each dict has: pid, name_it, name_en, hp, atk, defense, sp_atk, sp_def,
+    speed, bst, types_it, is_legendary, is_mythical.
+    """
+    max_id = MAX_POKEMON_PER_GEN.get(generation, 1025)
+    result: list[dict] = []
+
+    for pid in range(1, max_id + 1):
+        poke = pokemon_data.get(pid)
+        spec = species_data.get(pid)
+        if not poke or not spec:
+            continue
+
+        name_it = _get_localized(spec.get("names", []), "it") or poke["name"]
+        name_en = poke["name"].capitalize()
+
+        types_en = _get_pokemon_types_for_gen(poke, generation)
+        types_it = [type_name_it.get(t, t) for t in types_en]
+
+        hp = _get_stat(poke["stats"], "hp")
+        atk = _get_stat(poke["stats"], "attack")
+        defense = _get_stat(poke["stats"], "defense")
+        sp_atk = _get_stat(poke["stats"], "special-attack")
+        sp_def = _get_stat(poke["stats"], "special-defense")
+        speed = _get_stat(poke["stats"], "speed")
+        bst = hp + atk + defense + sp_atk + sp_def + speed
+
+        is_legendary = spec.get("is_legendary", False)
+        is_mythical = spec.get("is_mythical", False)
+
+        result.append({
+            "pid": pid,
+            "name_it": name_it,
+            "name_en": name_en,
+            "hp": hp,
+            "atk": atk,
+            "defense": defense,
+            "sp_atk": sp_atk,
+            "sp_def": sp_def,
+            "speed": speed,
+            "bst": bst,
+            "types_it": types_it,
+            "is_legendary": is_legendary,
+            "is_mythical": is_mythical,
+        })
+
+    return result
+
+
+def _format_stat_line(p: dict) -> str:
+    """Format one Pokemon's stats for a ranking line."""
+    tag = ""
+    if p["is_legendary"]:
+        tag = " [Leggendario]"
+    elif p["is_mythical"]:
+        tag = " [Misterioso]"
+    types_str = "/".join(p["types_it"])
+    return (
+        f"{p['name_it']} - BST: {p['bst']} (Tipi: {types_str}){tag}\n"
+        f"   HP: {p['hp']} | Attacco: {p['atk']} | Difesa: {p['defense']} "
+        f"| Att.Sp: {p['sp_atk']} | Dif.Sp: {p['sp_def']} | Velocita: {p['speed']}"
+    )
+
+
+def _format_single_stat_line(p: dict, stat_name: str, stat_value: int) -> str:
+    """Format one Pokemon's entry for a single-stat ranking."""
+    tag = ""
+    if p["is_legendary"]:
+        tag = " [Leggendario]"
+    elif p["is_mythical"]:
+        tag = " [Misterioso]"
+    types_str = "/".join(p["types_it"])
+    return f"{p['name_it']} - {stat_name}: {stat_value} (BST: {p['bst']}, Tipi: {types_str}){tag}"
+
+
+def build_summary_documents(
+    pokemon_data: dict[int, dict],
+    species_data: dict[int, dict],
+    all_types: dict[int, dict],
+    generation: int,
+    type_name_it: dict[str, str] | None = None,
+) -> list[Document]:
+    """Build pre-computed summary/ranking documents for a generation.
+
+    These documents are indexed alongside per-Pokemon docs so that
+    semantic search finds them for analytical queries like
+    "qual e il pokemon piu forte in gen 4".
+    """
+    if type_name_it is None:
+        type_name_it = _build_type_name_lookup(all_types)
+
+    poke_list = _build_pokemon_stat_list(
+        pokemon_data, species_data, all_types, generation, type_name_it,
+    )
+    if not poke_list:
+        return []
+
+    docs: list[Document] = []
+
+    # --- 1. BST ranking overall (top 20) ---
+    by_bst = sorted(poke_list, key=lambda p: p["bst"], reverse=True)
+    top20 = by_bst[:20]
+    lines = [f"{i+1}. {_format_stat_line(p)}" for i, p in enumerate(top20)]
+    best_overall = top20[0]
+    best_non_legend = next(
+        (p for p in by_bst if not p["is_legendary"] and not p["is_mythical"]),
+        None,
+    )
+
+    content = (
+        f"Classifica Pokemon per Statistiche Base Totali (BST) - Generazione {generation}\n\n"
+        f"I 20 Pokemon con il BST piu alto disponibili in Generazione {generation}:\n\n"
+        + "\n".join(lines)
+        + f"\n\nPokemon piu forte in assoluto: {best_overall['name_it']} (BST {best_overall['bst']})"
+    )
+    if best_non_legend:
+        content += (
+            f"\nPokemon non-leggendario piu forte: "
+            f"{best_non_legend['name_it']} (BST {best_non_legend['bst']})"
+        )
+
+    docs.append(Document(
+        page_content=content,
+        metadata={
+            "entity_type": "summary",
+            "summary_category": "bst_ranking_overall",
+            "name_en": "bst ranking overall",
+            "name_it": "classifica pokemon piu forti",
+            "generation": generation,
+        },
+    ))
+
+    # --- 2. BST non-legendary (top 15) ---
+    non_legends = [p for p in by_bst if not p["is_legendary"] and not p["is_mythical"]]
+    top15_nl = non_legends[:15]
+    lines_nl = [f"{i+1}. {_format_stat_line(p)}" for i, p in enumerate(top15_nl)]
+
+    docs.append(Document(
+        page_content=(
+            f"Classifica Pokemon non leggendari per BST - Generazione {generation}\n\n"
+            f"I 15 Pokemon non leggendari e non mitici con il BST piu alto "
+            f"disponibili in Generazione {generation}:\n\n"
+            + "\n".join(lines_nl)
+        ),
+        metadata={
+            "entity_type": "summary",
+            "summary_category": "bst_ranking_non_legendary",
+            "name_en": "non legendary bst ranking",
+            "name_it": "classifica pokemon non leggendari",
+            "generation": generation,
+        },
+    ))
+
+    # --- 3. Legendary & Mythical list ---
+    legends = [p for p in by_bst if p["is_legendary"] or p["is_mythical"]]
+    legend_lines = []
+    for i, p in enumerate(legends):
+        tag = "Leggendario" if p["is_legendary"] else "Misterioso"
+        types_str = "/".join(p["types_it"])
+        legend_lines.append(
+            f"{i+1}. {p['name_it']} - BST: {p['bst']} (Tipi: {types_str}) [{tag}]"
+        )
+
+    leg_count = sum(1 for p in legends if p["is_legendary"])
+    myth_count = sum(1 for p in legends if p["is_mythical"])
+
+    docs.append(Document(
+        page_content=(
+            f"Pokemon Leggendari e Mitici - Generazione {generation}\n\n"
+            f"Totale: {len(legends)} ({leg_count} leggendari, {myth_count} mitici)\n\n"
+            + "\n".join(legend_lines)
+        ),
+        metadata={
+            "entity_type": "summary",
+            "summary_category": "legendary_mythical_list",
+            "name_en": "legendary mythical pokemon list",
+            "name_it": "pokemon leggendari e mitici",
+            "generation": generation,
+        },
+    ))
+
+    # --- 4-9. Individual stat rankings (top 15 each) ---
+    stat_configs = [
+        ("hp", "HP", "pokemon con piu hp punti salute"),
+        ("atk", "Attacco", "pokemon con piu attacco fisico"),
+        ("defense", "Difesa", "pokemon con piu difesa fisico"),
+        ("sp_atk", "Attacco Speciale", "pokemon con piu attacco speciale"),
+        ("sp_def", "Difesa Speciale", "pokemon con piu difesa speciale"),
+        ("speed", "Velocita", "pokemon piu veloci"),
+    ]
+
+    for stat_key, stat_label, name_it_val in stat_configs:
+        by_stat = sorted(poke_list, key=lambda p, k=stat_key: p[k], reverse=True)
+        top15 = by_stat[:15]
+        stat_lines = [
+            f"{i+1}. {_format_single_stat_line(p, stat_label, p[stat_key])}"
+            for i, p in enumerate(top15)
+        ]
+        best = top15[0]
+        best_nl = next(
+            (p for p in by_stat if not p["is_legendary"] and not p["is_mythical"]),
+            None,
+        )
+
+        stat_content = (
+            f"Classifica Pokemon per {stat_label} base - Generazione {generation}\n\n"
+            f"I 15 Pokemon con la {stat_label} base piu alta "
+            f"disponibili in Generazione {generation}:\n\n"
+            + "\n".join(stat_lines)
+            + f"\n\nPokemon con {stat_label} piu alta: {best['name_it']} ({best[stat_key]})"
+        )
+        if best_nl:
+            stat_content += (
+                f"\nNon-leggendario con {stat_label} piu alta: "
+                f"{best_nl['name_it']} ({best_nl[stat_key]})"
+            )
+
+        cat_suffix = stat_key.replace("_", "")
+        docs.append(Document(
+            page_content=stat_content,
+            metadata={
+                "entity_type": "summary",
+                "summary_category": f"stat_ranking_{cat_suffix}",
+                "name_en": f"{stat_label.lower()} ranking",
+                "name_it": name_it_val,
+                "generation": generation,
+            },
+        ))
+
+    # --- 10. Type distribution ---
+    type_counts: dict[str, int] = {}
+    for p in poke_list:
+        for t in p["types_it"]:
+            type_counts[t] = type_counts.get(t, 0) + 1
+
+    sorted_types = sorted(type_counts.items(), key=lambda x: x[1], reverse=True)
+    type_lines = [f"- {tname}: {count} Pokemon" for tname, count in sorted_types]
+
+    most_common = sorted_types[0] if sorted_types else ("?", 0)
+    least_common = sorted_types[-1] if sorted_types else ("?", 0)
+
+    legend_names = [p["name_it"] for p in legends if p["is_legendary"]]
+    mythical_names = [p["name_it"] for p in legends if p["is_mythical"]]
+
+    dist_content = (
+        f"Distribuzione Pokemon per Tipo - Generazione {generation}\n\n"
+        f"Totale Pokemon disponibili in Generazione {generation}: {len(poke_list)}\n\n"
+        f"Pokemon per tipo (un Pokemon doppio tipo viene contato in entrambi):\n"
+        + "\n".join(type_lines)
+        + f"\n\nTipo piu comune: {most_common[0]} ({most_common[1]} Pokemon)"
+        + f"\nTipo piu raro: {least_common[0]} ({least_common[1]} Pokemon)"
+        + f"\n\nPokemon Leggendari ({leg_count}): {', '.join(legend_names) if legend_names else 'Nessuno'}"
+        + f"\nPokemon Mitici ({myth_count}): {', '.join(mythical_names) if mythical_names else 'Nessuno'}"
+    )
+
+    docs.append(Document(
+        page_content=dist_content,
+        metadata={
+            "entity_type": "summary",
+            "summary_category": "type_distribution",
+            "name_en": "type distribution",
+            "name_it": "distribuzione pokemon per tipo",
+            "generation": generation,
+        },
+    ))
+
+    return docs
+
+
 # --- Move Documents ---
 
 
@@ -999,6 +1279,14 @@ def build_all_documents_for_generation(
         moves_data=all_data.get("moves"),
         abilities_data=all_data.get("abilities"),
         items_data=all_data.get("items"),
+    ))
+
+    docs.extend(build_summary_documents(
+        all_data["pokemon"],
+        all_data["species"],
+        all_data["types"],
+        generation,
+        type_name_it=type_name_it,
     ))
 
     docs.extend(build_move_documents(

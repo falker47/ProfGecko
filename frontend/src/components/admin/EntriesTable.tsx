@@ -19,6 +19,7 @@ const DEFAULT_FILTERS: EntriesFilters = {
   reviewed: null,
   generation: null,
   search: "",
+  feedback: null,
 };
 
 export default function EntriesTable({

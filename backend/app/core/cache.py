@@ -40,7 +40,7 @@ _custom_stopwords: set[str] = set()
 
 _STOPWORDS: frozenset[str] = frozenset({
     # Italian — articles, prepositions, pronouns, conjunctions
-    "il", "lo", "la", "le", "li", "un", "una", "uno", "gli", "dei",
+    "il", "lo", "la", "le", "li", "un", "una", "uno", "gli", "dei", "dammi",
     "del", "della", "delle", "degli", "dettagli", "nel", "nella", "nelle", "nei",
     "negli", "sul", "sulla", "sulle", "al", "alla", "alle", "ai",
     "che", "chi", "per", "con", "tra", "fra", "non", "piu", "più", "di",
@@ -490,6 +490,7 @@ class ResponseCache:
         reviewed_only: bool | None = None,
         generation: int | None = None,
         search: str | None = None,
+        feedback: str | None = None,
     ) -> dict:
         """List cache entries with pagination and optional filters."""
         conditions: list[str] = []
@@ -507,6 +508,10 @@ class ResponseCache:
         if search:
             conditions.append("question LIKE ?")
             params.append(f"%{search}%")
+
+        if feedback is not None and feedback in ("V", "F", "M", "-"):
+            conditions.append("feedback = ?")
+            params.append(feedback)
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 

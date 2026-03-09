@@ -170,11 +170,12 @@ async def cache_list_entries(
     reviewed: bool | None = Query(None, description="Filter: true=reviewed, false=not reviewed, omit=all"),
     generation: int | None = Query(None, ge=1, le=9),
     search: str | None = Query(None, description="Search in question text"),
+    feedback: str | None = Query(None, description="Filter by feedback: V, F, M, or -"),
 ):
     """List cache entries with pagination and filters.
 
     Usage:
-        GET /api/admin/cache/entries?secret=...&page=1&reviewed=false
+        GET /api/admin/cache/entries?secret=...&page=1&reviewed=false&feedback=V
     """
     if secret != request.app.state.jwt_secret:
         raise HTTPException(status_code=403, detail="Invalid secret")
@@ -186,6 +187,7 @@ async def cache_list_entries(
         reviewed_only=reviewed,
         generation=generation,
         search=search,
+        feedback=feedback,
     )
 
 

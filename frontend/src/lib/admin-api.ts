@@ -65,6 +65,9 @@ export async function getEntries(
   if (filters.search.trim()) {
     params.search = filters.search.trim();
   }
+  if (filters.feedback !== null) {
+    params.feedback = filters.feedback;
+  }
   const res = await adminFetch(secret, "/api/admin/cache/entries", { params });
   return res.json();
 }

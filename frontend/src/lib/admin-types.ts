@@ -73,4 +73,5 @@ export interface EntriesFilters {
   reviewed: boolean | null;
   generation: number | null;
   search: string;
+  feedback: string | null; // "V" | "F" | "M" | "-" | null (all)
 }

@@ -75,8 +75,14 @@ async def chat_stream(
             import logging
             logging.getLogger(__name__).exception("LLM streaming error")
             err_str = str(exc)
+            # Extract model name from error for debugging
+            model_hint = ""
+            if "gemini-2.0" in err_str:
+                model_hint = " (fallback: gemini-2.0-flash)"
+            elif "gemini-2.5" in err_str:
+                model_hint = " (primario: gemini-2.5-flash)"
             if "429" in err_str or "quota" in err_str.lower():
-                user_msg = "Il servizio AI ha raggiunto il limite di richieste. Riprova tra qualche minuto."
+                user_msg = f"Il servizio AI ha raggiunto il limite di richieste{model_hint}. Riprova tra qualche minuto."
             else:
                 user_msg = "Errore nella generazione della risposta. Riprova tra poco."
             yield {

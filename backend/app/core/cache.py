@@ -43,17 +43,20 @@ _STOPWORDS: frozenset[str] = frozenset({
     "il", "lo", "la", "le", "li", "un", "una", "uno", "gli", "dei", "dammi",
     "del", "della", "delle", "degli", "dettagli", "nel", "nella", "nelle", "nei",
     "negli", "sul", "sulla", "sulle", "al", "alla", "alle", "ai",
-    "che", "chi", "per", "con", "tra", "fra", "non", "piu", "più", "di",
+    "che", "chi", "per", "con", "tra", "fra", "non", "piu", "più", "di", "mi",
     "come", "cosa", "quali", "quale", "qual", "si", "sono", "suo", "sua",
     "suoi", "sue", "questo", "questa", "quello", "quella", "questi",
     "queste", "quanti", "quante", "quanto",
+    "tutto", "tutta", "tutti", "tutte",
     "molto", "poco", "troppo", "anche", "ancora", "tanto", "così", "cosi",
     "su", "nei", "oppure",
+    "perché", "perche", "perchè",  # interrogative / conjunction
     # Italian — common verbs / filler in questions
     "ha", "hai", "puoi", "può", "fa", "vai", "vorrei", "sapere",
     "parlami", "dimmi", "mostrami", "spiegami", "descrivi", "elenca",
     "confronta", "confronto", "vincerebbe", "scontro",
     "funziona", "funzionano", "impara", "apprende", "possiede",
+    "affrontare", "avventura",
     "cos",  # from "cos'è" (tokenized as "cos" + "è")
     # NOTE: parole strategiche (consiglio, meglio, conviene, etc.) e
     # trainer (capipalestra, superquattro, etc.) NON sono stopwords.

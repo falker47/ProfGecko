@@ -82,7 +82,10 @@ export async function streamChat(opts: StreamChatOptions): Promise<void> {
 
           try {
             const data = JSON.parse(dataStr);
-            if ("token" in data) {
+            if ("error" in data) {
+              onError(data.error || "Errore interno del server.");
+              return;
+            } else if ("token" in data) {
               onToken(data.token);
             } else if ("generation_used" in data) {
               // Dispatch credit update if present

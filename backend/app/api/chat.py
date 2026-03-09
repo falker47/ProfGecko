@@ -61,15 +61,24 @@ async def chat_stream(
     generation = RAGChain._detect_generation_with_history(body.message, history)
 
     async def event_generator():
-        async for chunk in rag_chain.astream_cached(
-            question=body.message,
-            chat_history=history,
-            cache=cache,
-        ):
+        try:
+            async for chunk in rag_chain.astream_cached(
+                question=body.message,
+                chat_history=history,
+                cache=cache,
+            ):
+                yield {
+                    "event": "token",
+                    "data": json.dumps({"token": chunk}),
+                }
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).exception("LLM streaming error")
             yield {
-                "event": "token",
-                "data": json.dumps({"token": chunk}),
+                "event": "error",
+                "data": json.dumps({"error": str(exc)}),
             }
+            return
 
         # If cache hit, refund the credit that was pre-deducted
         was_cache_hit = getattr(rag_chain, "_last_cache_hit", False)

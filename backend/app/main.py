@@ -37,6 +37,11 @@ async def lifespan(app: FastAPI):
         settings.chroma_collection_name,
         embeddings,
     )
+    doc_count = vectorstore._collection.count()
+    logging.getLogger(__name__).info(
+        "Vectorstore loaded: %d documents in '%s'",
+        doc_count, settings.chroma_collection_name,
+    )
 
     # Initialize LLM (primary + fallback)
     llm = get_llm(

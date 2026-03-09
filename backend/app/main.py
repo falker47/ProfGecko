@@ -108,6 +108,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    log = logging.getLogger(__name__)
     settings = get_settings()
 
     app = FastAPI(
@@ -124,6 +125,13 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix="/api")
+
+    # Log all registered routes at startup for deployment verification
+    admin_routes = [
+        r.path for r in app.routes
+        if hasattr(r, "path") and "/admin/" in r.path
+    ]
+    log.info("Registered admin routes (%d): %s", len(admin_routes), admin_routes)
 
     return app
 

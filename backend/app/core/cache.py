@@ -180,6 +180,9 @@ _STRATEGIC_SYNONYM_MAP: dict[str, str] = {
     "gym": "_trainer_",
     "leader": "_trainer_",
     "champion": "_trainer_",
+    "gymleader": "_trainer_",
+    "league": "_trainer_",
+    "elitefour": "_trainer_",
 }
 
 # ── Generation keyword triggers ─────────────────────────────────────
@@ -843,23 +846,6 @@ class ResponseCache:
         gen_clause = "AND generation = ?" if generation else ""
         gen_params: tuple = (generation,) if generation else ()
 
-        # DEBUG: check specific entries to diagnose why GROUP BY misses them
-        debug_cursor = await self._db.execute(
-            "SELECT id, normal_hash, generation FROM response_cache ORDER BY id DESC LIMIT 10"
-        )
-        debug_rows = await debug_cursor.fetchall()
-        logger.info(
-            "list_duplicate_groups DEBUG - last 10 entries: %s",
-            [(r[0], r[1][:16] if r[1] else "NULL", r[2]) for r in debug_rows],
-        )
-
-        # Also check total entry count
-        total_cursor = await self._db.execute(
-            "SELECT COUNT(*) FROM response_cache"
-        )
-        total_entries = (await total_cursor.fetchone())[0]
-        logger.info("list_duplicate_groups DEBUG - total entries: %d", total_entries)
-
         count_cursor = await self._db.execute(
             f"""SELECT COUNT(*) FROM (
                 SELECT normal_hash, generation
@@ -871,10 +857,6 @@ class ResponseCache:
             gen_params,
         )
         total_groups = (await count_cursor.fetchone())[0]
-        logger.info(
-            "list_duplicate_groups: gen_filter=%s, total_groups=%d",
-            generation, total_groups,
-        )
 
         offset = (page - 1) * per_page
         group_cursor = await self._db.execute(
@@ -928,11 +910,6 @@ class ResponseCache:
         return {
             "groups": groups,
             "total_groups": total_groups,
-            "_debug_total_entries": total_entries,
-            "_debug_last_10": [
-                {"id": r[0], "hash": r[1][:16] if r[1] else None, "gen": r[2]}
-                for r in debug_rows
-            ],
             "page": page,
             "per_page": per_page,
         }

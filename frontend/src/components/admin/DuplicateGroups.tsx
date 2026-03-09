@@ -363,24 +363,6 @@ export default function DuplicateGroups({
           ) : (
             <div className="py-6 text-center text-sm text-gray-400">
               <p>Nessun duplicato trovato</p>
-              {/* Debug info from API */}
-              {data && "_debug_last_10" in data && (
-                <details className="mt-3 text-left">
-                  <summary className="cursor-pointer text-xs text-gray-400">
-                    Debug: ultime 10 entry nel DB
-                  </summary>
-                  <pre className="mt-2 max-h-40 overflow-auto rounded bg-gray-100 p-2 text-xs text-gray-600">
-                    {JSON.stringify(
-                      {
-                        total_entries: (data as unknown as Record<string, unknown>)._debug_total_entries,
-                        last_10: (data as unknown as Record<string, unknown>)._debug_last_10,
-                      },
-                      null,
-                      2,
-                    )}
-                  </pre>
-                </details>
-              )}
             </div>
           )}
         </div>

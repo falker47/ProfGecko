@@ -258,6 +258,27 @@ async def cache_approve_entry(
     return {"status": "ok", "entry_id": entry_id, "reviewed": True}
 
 
+@router.delete("/cache/entries/{entry_id}")
+async def cache_delete_entry(
+    request: Request,
+    entry_id: int = Path(..., description="Cache entry ID"),
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Delete a single cache entry.
+
+    Usage:
+        DELETE /api/admin/cache/entries/42?secret=...
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    cache = _get_cache(request)
+    success = await cache.delete_entry(entry_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"status": "ok", "entry_id": entry_id}
+
+
 @router.post("/cache/rehash")
 async def cache_rehash(
     request: Request,

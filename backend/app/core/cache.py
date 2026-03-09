@@ -640,6 +640,21 @@ class ResponseCache:
         logger.info("Cache entry #%d marked as REVIEWED", entry_id)
         return True
 
+    async def delete_entry(self, entry_id: int) -> bool:
+        """Delete a single cache entry by ID."""
+        row = await self._fetchone(
+            "SELECT id FROM response_cache WHERE id = ?", (entry_id,),
+        )
+        if not row:
+            return False
+
+        await self._db.execute(
+            "DELETE FROM response_cache WHERE id = ?", (entry_id,),
+        )
+        await self._db.commit()
+        logger.info("Cache entry #%d DELETED", entry_id)
+        return True
+
     # ── Import (bulk seed) ─────────────────────────────────────────
 
     async def import_entries(

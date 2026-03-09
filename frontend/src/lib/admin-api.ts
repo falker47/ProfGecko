@@ -100,6 +100,18 @@ export async function approveEntry(
   return res.json();
 }
 
+export async function deleteEntry(
+  secret: string,
+  entryId: number,
+): Promise<{ status: string; entry_id: number }> {
+  const res = await adminFetch(
+    secret,
+    `/api/admin/cache/entries/${entryId}`,
+    { method: "DELETE" },
+  );
+  return res.json();
+}
+
 // ── Debug ─────────────────────────────────────────────────────────
 
 export async function debugHash(

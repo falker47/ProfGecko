@@ -3,7 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import ReactMarkdown from "react-markdown";
-import { approveEntry } from "@/lib/admin-api";
+import { approveEntry, deleteEntry } from "@/lib/admin-api";
 import type { CacheEntry } from "@/lib/admin-types";
 import EntryEditor from "./EntryEditor";
 import TokenInspector from "./TokenInspector";
@@ -43,6 +43,7 @@ export default function EntryRow({
   onAuthFailed,
 }: EntryRowProps) {
   const [approving, setApproving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleApprove(e: React.MouseEvent) {
     e.stopPropagation();
@@ -56,6 +57,22 @@ export default function EntryRow({
       }
     } finally {
       setApproving(false);
+    }
+  }
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm(`Eliminare la entry #${entry.id}?`)) return;
+    setDeleting(true);
+    try {
+      await deleteEntry(secret, entry.id);
+      onUpdated();
+    } catch (err) {
+      if (err instanceof Error && err.message === "AUTH_FAILED") {
+        onAuthFailed();
+      }
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -108,15 +125,25 @@ export default function EntryRow({
           {formatDate(entry.created_at)}
         </td>
         <td className="px-3 py-2.5">
-          {!entry.reviewed && (
+          <div className="flex items-center gap-1">
+            {!entry.reviewed && (
+              <button
+                onClick={handleApprove}
+                disabled={approving}
+                className="rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-200 disabled:opacity-50"
+              >
+                {approving ? "..." : "Approva"}
+              </button>
+            )}
             <button
-              onClick={handleApprove}
-              disabled={approving}
-              className="rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-200 disabled:opacity-50"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded bg-red-50 px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+              title="Elimina entry"
             >
-              {approving ? "..." : "Approva"}
+              {deleting ? "..." : "✕"}
             </button>
-          )}
+          </div>
         </td>
       </tr>
 

@@ -12,7 +12,8 @@ from app.core.cache import ResponseCache
 
 
 class UpdateEntryBody(BaseModel):
-    response: str
+    response: str | None = None
+    generation: int | None = None
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -191,17 +192,22 @@ async def cache_update_entry(
     secret: str = Query(..., description="JWT_SECRET as auth"),
     body: UpdateEntryBody = Body(...),
 ):
-    """Update a cache entry's response and mark it as reviewed.
+    """Update a cache entry's response and/or generation, mark as reviewed.
 
     Usage:
         PUT /api/admin/cache/entries/42?secret=...
-        Body: {"response": "New improved response text"}
+        Body: {"response": "New text"}  or  {"generation": 1}  or both
     """
     if secret != request.app.state.jwt_secret:
         raise HTTPException(status_code=403, detail="Invalid secret")
 
+    if body.response is None and body.generation is None:
+        raise HTTPException(status_code=400, detail="Provide response and/or generation")
+
     cache = _get_cache(request)
-    result = await cache.update_entry(entry_id, body.response)
+    result = await cache.update_entry(
+        entry_id, response=body.response, generation=body.generation,
+    )
     if result is None:
         raise HTTPException(status_code=404, detail="Entry not found")
     return result

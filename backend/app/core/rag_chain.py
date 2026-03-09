@@ -391,32 +391,40 @@ class RAGChain:
         On cache miss: streams from LLM, collects the full response,
         stores it in cache, and sets ``self._last_cache_hit = False``.
 
-        Cache lookup and storage only happen for the FIRST question
-        in a conversation (no chat history). Follow-up questions are
-        context-dependent and cannot be meaningfully cached.
+        Cache eligibility:
+        - First question (no history): always cacheable.
+        - Standalone question (>= 6 words) even with history: cacheable,
+          because its meaning doesn't depend on previous messages.
+        - Short follow-up (< 6 words, e.g. "e le mosse?"): NOT cacheable,
+          because its meaning depends on the conversation context.
+
+        Uses the same word-count threshold as _build_retrieval_query.
         """
         self._last_cache_hit = False
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
 
-        # Cache only for first question — follow-ups depend on context
-        # from previous messages and cannot be matched reliably.
-        is_first_question = not history_list
+        # A question is cacheable if it's the first in the conversation
+        # OR if it's self-contained (>= 6 words, meaning doesn't depend
+        # on chat history). Short follow-ups like "e le mosse?" are
+        # context-dependent and cannot be meaningfully cached.
+        word_count = len(question.split())
+        is_cacheable = not history_list or word_count >= _SELF_CONTAINED_WORD_COUNT
 
-        if cache and is_first_question:
+        if cache and is_cacheable:
             cached = await cache.get(question, generation)
             if cached is not None:
                 self._last_cache_hit = True
                 yield cached
                 return
 
-        # Cache miss (or follow-up) — stream from LLM
+        # Cache miss (or non-cacheable follow-up) — stream from LLM
         full_response: list[str] = []
         async for chunk in self.astream(question, chat_history):
             full_response.append(chunk)
             yield chunk
 
-        # Store only first questions
+        # Store cacheable questions
         response_text = "".join(full_response)
-        if cache and is_first_question and response_text.strip():
+        if cache and is_cacheable and response_text.strip():
             await cache.put(question, generation, response_text)

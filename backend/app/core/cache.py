@@ -463,22 +463,47 @@ class ResponseCache:
             "total_pages": (total + per_page - 1) // per_page if total else 0,
         }
 
-    async def update_entry(self, entry_id: int, response: str) -> dict | None:
-        """Update a cache entry's response and mark it as reviewed."""
+    async def update_entry(
+        self,
+        entry_id: int,
+        response: str | None = None,
+        generation: int | None = None,
+    ) -> dict | None:
+        """Update a cache entry's response and/or generation, mark as reviewed.
+
+        If generation changes, hashes are recomputed automatically.
+        """
         row = await self._fetchone(
-            "SELECT id FROM response_cache WHERE id = ?", (entry_id,),
+            "SELECT id, question FROM response_cache WHERE id = ?", (entry_id,),
         )
         if not row:
             return None
 
+        sets: list[str] = ["reviewed = 1", "reviewed_at = datetime('now')"]
+        params: list = []
+
+        if response is not None:
+            sets.append("response = ?")
+            params.append(response)
+
+        if generation is not None:
+            # Recompute hashes for the new generation context
+            question = row[1]
+            sets.append("generation = ?")
+            params.append(generation)
+            sets.append("exact_hash = ?")
+            params.append(_exact_hash(question))
+            sets.append("normal_hash = ?")
+            params.append(_normal_hash(question))
+
+        params.append(entry_id)
         await self._db.execute(
-            """UPDATE response_cache
-               SET response = ?, reviewed = 1, reviewed_at = datetime('now')
-               WHERE id = ?""",
-            (response, entry_id),
+            f"UPDATE response_cache SET {', '.join(sets)} WHERE id = ?",
+            tuple(params),
         )
         await self._db.commit()
-        logger.info("Cache entry #%d REVIEWED and updated", entry_id)
+        logger.info("Cache entry #%d UPDATED (response=%s, gen=%s)",
+                     entry_id, response is not None, generation)
 
         cursor = await self._db.execute(
             """SELECT id, question, generation, response, hit_count,

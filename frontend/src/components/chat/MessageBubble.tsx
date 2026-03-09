@@ -39,7 +39,7 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : (
-            <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0">
+            <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-headings:my-2 prose-table:my-2 prose-hr:my-2 prose-strong:font-semibold">
               <Markdown>{message.content || "..."}</Markdown>
             </div>
           )}

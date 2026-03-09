@@ -392,13 +392,27 @@ def build_pokemon_documents(
             it_name = _get_localized(mv.get("names", []), "it")
             move_name_it[slug] = it_name or slug.replace("-", " ").title()
 
-    # Build ability name lookup (EN slug -> IT name)
+    # Build ability name + effect lookup (EN slug -> IT name / effect)
     ability_name_it: dict[str, str] = {}
+    ability_effect_it: dict[str, str] = {}
     if abilities_data:
         for ab in abilities_data.values():
             slug = ab["name"]  # e.g. "inner-focus"
             it_name = _get_localized(ab.get("names", []), "it")
             ability_name_it[slug] = it_name or slug.replace("-", " ").title()
+            # Effect description (IT with EN fallback)
+            effect = ""
+            for ee in ab.get("effect_entries", []):
+                if ee.get("language", {}).get("name") == "it":
+                    effect = ee.get("short_effect", ee.get("effect", ""))
+                    break
+            if not effect:
+                for ee in ab.get("effect_entries", []):
+                    if ee.get("language", {}).get("name") == "en":
+                        effect = ee.get("short_effect", ee.get("effect", ""))
+                        break
+            if effect:
+                ability_effect_it[slug] = effect
 
     # Build species name lookup (slug -> IT name) for evolution chains
     species_name_it: dict[str, str] = {}
@@ -444,18 +458,26 @@ def build_pokemon_documents(
         speed = _get_stat(poke["stats"], "speed")
         bst = hp + atk + defense + sp_atk + sp_def + speed
 
-        # Abilities (generation-aware + Italian names)
+        # Abilities (generation-aware + Italian names + effect descriptions)
         ab_slugs, hidden_slug = _get_pokemon_abilities_for_gen(
             poke, generation, abilities_data or {},
         )
-        abilities = [
-            ability_name_it.get(s, s.replace("-", " ").title()) for s in ab_slugs
-        ]
-        hidden_ability = (
-            ability_name_it.get(hidden_slug, hidden_slug.replace("-", " ").title())
-            if hidden_slug
-            else None
-        )
+        abilities_with_desc: list[str] = []
+        for s in ab_slugs:
+            ab_name = ability_name_it.get(s, s.replace("-", " ").title())
+            ab_eff = ability_effect_it.get(s, "")
+            abilities_with_desc.append(
+                f"{ab_name}: {ab_eff}" if ab_eff else ab_name
+            )
+        hidden_ability_desc = ""
+        if hidden_slug:
+            h_name = ability_name_it.get(
+                hidden_slug, hidden_slug.replace("-", " ").title()
+            )
+            h_eff = ability_effect_it.get(hidden_slug, "")
+            hidden_ability_desc = (
+                f"{h_name}: {h_eff}" if h_eff else h_name
+            )
 
         # Generation introduced
         gen_introduced = int(
@@ -559,8 +581,9 @@ Peso: {weight_kg} kg
 Efficacia tipi (difesa):
 {type_eff_text}
 
-Abilita: {', '.join(abilities) if abilities else 'Nessuna'}
-Abilita nascosta: {hidden_ability or 'Nessuna'}
+Abilita:
+{chr(10).join('- ' + a for a in abilities_with_desc) if abilities_with_desc else 'Nessuna'}
+Abilita nascosta: {hidden_ability_desc or 'Nessuna'}
 
 Catena evolutiva: {evo_text or 'Nessuna evoluzione'}
 

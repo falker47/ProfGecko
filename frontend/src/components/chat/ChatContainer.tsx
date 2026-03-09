@@ -18,6 +18,7 @@ export default function ChatContainer() {
     showLoginPrompt,
     sendMessage,
     clearChat,
+    handleFeedback,
   } = useChat(token);
 
   // Show credits exhausted banner if:
@@ -28,7 +29,7 @@ export default function ChatContainer() {
 
   return (
     <div className="flex h-full flex-col">
-      <MessageList messages={messages} />
+      <MessageList messages={messages} onFeedback={handleFeedback} />
 
       {isLoading && <TypingIndicator />}
 

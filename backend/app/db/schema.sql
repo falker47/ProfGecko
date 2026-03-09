@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS response_cache (
     response        TEXT NOT NULL,
     hit_count       INTEGER NOT NULL DEFAULT 0,
     reviewed        INTEGER NOT NULL DEFAULT 0,   -- 0=auto, 1=human-reviewed
+    feedback        TEXT NOT NULL DEFAULT '-',   -- V=correct, F=wrong, M=missing(auto), -=no feedback
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     last_hit_at     TEXT DEFAULT NULL,
     reviewed_at     TEXT DEFAULT NULL

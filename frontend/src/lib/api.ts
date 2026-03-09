@@ -6,7 +6,7 @@ export interface StreamChatOptions {
   history: Message[];
   authToken?: string | null;
   onToken: (token: string) => void;
-  onDone: (generationUsed?: number) => void;
+  onDone: (generationUsed?: number, entryId?: number) => void;
   onError: (error: string) => void;
   onCreditsExhausted?: () => void;
 }
@@ -93,7 +93,7 @@ export async function streamChat(opts: StreamChatOptions): Promise<void> {
                   }),
                 );
               }
-              onDone(data.generation_used);
+              onDone(data.generation_used, data.entry_id);
               return;
             }
           } catch {
@@ -107,4 +107,18 @@ export async function streamChat(opts: StreamChatOptions): Promise<void> {
   }
 
   onDone();
+}
+
+export async function submitFeedback(
+  entryId: number,
+  feedback: "V" | "F",
+): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/chat/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entry_id: entryId, feedback }),
+  });
+  if (!res.ok) {
+    throw new Error(`Feedback error: ${res.status}`);
+  }
 }

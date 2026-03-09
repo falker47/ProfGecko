@@ -55,6 +55,10 @@ _STOP_WORDS = frozenset({
 # contesto dalla chat history per evitare cross-contamination.
 _SELF_CONTAINED_WORD_COUNT = 6
 
+# Phrase used by the LLM when context doesn't contain the answer.
+# Matched (lowercase) against response text to auto-flag as feedback='M'.
+_MISSING_PHRASE = "non ho questa informazione"
+
 
 def _detect_excluded_types(question: str) -> list[str]:
     """Determina quali entity_type escludere dal retrieval ChromaDB.
@@ -401,6 +405,7 @@ class RAGChain:
         Uses the same word-count threshold as _build_retrieval_query.
         """
         self._last_cache_hit = False
+        self._last_entry_id: int | None = None
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
 
@@ -414,8 +419,10 @@ class RAGChain:
         if cache and is_cacheable:
             cached = await cache.get(question, generation)
             if cached is not None:
+                response_text, entry_id = cached
                 self._last_cache_hit = True
-                yield cached
+                self._last_entry_id = entry_id
+                yield response_text
                 return
 
         # Cache miss (or non-cacheable follow-up) — stream from LLM
@@ -427,4 +434,7 @@ class RAGChain:
         # Store cacheable questions
         response_text = "".join(full_response)
         if cache and is_cacheable and response_text.strip():
-            await cache.put(question, generation, response_text)
+            # Auto-detect "missing info" responses → feedback='M'
+            feedback = "M" if _MISSING_PHRASE in response_text.lower() else "-"
+            entry_id = await cache.put(question, generation, response_text, feedback=feedback)
+            self._last_entry_id = entry_id

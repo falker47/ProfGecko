@@ -90,6 +90,20 @@ export default function EntryRow({
             <span className="text-gray-300" title="Non revisionata">✗</span>
           )}
         </td>
+        <td className="px-3 py-2.5 text-center">
+          {entry.feedback === "V" && (
+            <span className="text-emerald-600" title="Corretta">✓</span>
+          )}
+          {entry.feedback === "F" && (
+            <span className="text-red-500" title="Errata">✗</span>
+          )}
+          {entry.feedback === "M" && (
+            <span className="text-amber-500" title="Missing (auto)">⚠</span>
+          )}
+          {entry.feedback === "-" && (
+            <span className="text-gray-300" title="Nessun feedback">—</span>
+          )}
+        </td>
         <td className="px-3 py-2.5 text-xs text-gray-400">
           {formatDate(entry.created_at)}
         </td>
@@ -109,7 +123,7 @@ export default function EntryRow({
       {/* Riga espansa */}
       {expanded && (
         <tr className="border-b border-gray-200 bg-gray-50/80">
-          <td colSpan={8} className="px-4 py-4">
+          <td colSpan={9} className="px-4 py-4">
             <div className="space-y-4">
               {/* Domanda completa */}
               <div>

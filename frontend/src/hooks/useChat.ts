@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { streamChat } from "@/lib/api";
+import { streamChat, submitFeedback as apiFeedback } from "@/lib/api";
 import { ANONYMOUS_LIMIT, WELCOME_MESSAGE } from "@/lib/constants";
 import type { Message } from "@/lib/types";
 
@@ -105,7 +105,14 @@ export function useChat(authToken?: string | null) {
           );
         },
         // onDone
-        onDone: () => {
+        onDone: (_gen?: number, entryId?: number) => {
+          if (entryId) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, entryId } : m,
+              ),
+            );
+          }
           setIsLoading(false);
         },
         // onError
@@ -135,6 +142,38 @@ export function useChat(authToken?: string | null) {
     setShowLoginPrompt(false);
   }, []);
 
+  const handleFeedback = useCallback(
+    async (messageId: string, feedback: "V" | "F") => {
+      const msg = messages.find((m) => m.id === messageId);
+      if (!msg?.entryId) return;
+
+      // Toggle: clicking same feedback removes it
+      const newFeedback = msg.feedback === feedback ? null : feedback;
+
+      // Optimistic UI update
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, feedback: newFeedback } : m,
+        ),
+      );
+
+      // Only call API when setting (not unsetting)
+      if (newFeedback) {
+        try {
+          await apiFeedback(msg.entryId, newFeedback);
+        } catch {
+          // Revert on error
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, feedback: msg.feedback } : m,
+            ),
+          );
+        }
+      }
+    },
+    [messages],
+  );
+
   return {
     messages,
     isLoading,
@@ -144,5 +183,6 @@ export function useChat(authToken?: string | null) {
     sendMessage,
     clearChat,
     dismissLoginPrompt,
+    handleFeedback,
   };
 }

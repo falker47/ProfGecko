@@ -12,6 +12,7 @@ export interface CacheEntry {
   reviewed_at: string | null;
   exact_hash: string;
   normal_hash: string;
+  feedback: string;
 }
 
 export interface EntriesResponse {

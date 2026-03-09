@@ -34,6 +34,7 @@ class Database:
         migrations = [
             "ALTER TABLE response_cache ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE response_cache ADD COLUMN reviewed_at TEXT DEFAULT NULL",
+            "ALTER TABLE response_cache ADD COLUMN feedback TEXT NOT NULL DEFAULT '-'",
         ]
         for sql in migrations:
             try:

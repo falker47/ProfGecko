@@ -1,6 +1,8 @@
 import json
+from enum import Enum
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from app.auth.dependencies import get_current_user_optional
@@ -10,6 +12,16 @@ from app.credits.dependencies import check_and_deduct_credit
 from app.models.schemas import ChatRequest, ChatResponse
 
 router = APIRouter()
+
+
+class FeedbackValue(str, Enum):
+    V = "V"
+    F = "F"
+
+
+class FeedbackBody(BaseModel):
+    entry_id: int
+    feedback: FeedbackValue
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -61,6 +73,7 @@ async def chat_stream(
 
         # If cache hit, refund the credit that was pre-deducted
         was_cache_hit = getattr(rag_chain, "_last_cache_hit", False)
+        entry_id = getattr(rag_chain, "_last_entry_id", None)
         final_credits = credit_info
         if was_cache_hit and credit_info and user and request.app.state.db:
             from app.config import get_settings
@@ -77,7 +90,31 @@ async def chat_stream(
                 "generation_used": generation,
                 "credits": final_credits,
                 "cached": was_cache_hit,
+                "entry_id": entry_id,
             }),
         }
 
     return EventSourceResponse(event_generator())
+
+
+@router.post("/chat/feedback")
+async def submit_feedback(
+    request: Request,
+    body: FeedbackBody = Body(...),
+):
+    """Submit user feedback on a cached response.
+
+    Public endpoint (no admin secret). Only allows V (correct) or F (wrong).
+
+    Usage:
+        POST /api/chat/feedback
+        Body: {"entry_id": 42, "feedback": "V"}
+    """
+    cache: ResponseCache | None = getattr(request.app.state, "cache", None)
+    if cache is None:
+        raise HTTPException(status_code=503, detail="Cache not initialized")
+
+    success = await cache.set_feedback(body.entry_id, body.feedback.value)
+    if not success:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"status": "ok", "entry_id": body.entry_id, "feedback": body.feedback.value}

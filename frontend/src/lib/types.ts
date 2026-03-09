@@ -3,6 +3,8 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  entryId?: number;
+  feedback?: "V" | "F" | null;
 }
 
 export interface ChatRequest {

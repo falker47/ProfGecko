@@ -73,6 +73,7 @@ export default function EntriesTable({
               <th className="px-3 py-2.5">Risposta</th>
               <th className="px-3 py-2.5 text-center">Hit</th>
               <th className="px-3 py-2.5 text-center">Rev.</th>
+              <th className="px-3 py-2.5 text-center">FB</th>
               <th className="px-3 py-2.5">Creata</th>
               <th className="px-3 py-2.5">Azioni</th>
             </tr>
@@ -80,7 +81,7 @@ export default function EntriesTable({
           <tbody>
             {loading && !data ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-sm text-gray-400">
+                <td colSpan={9} className="py-12 text-center text-sm text-gray-400">
                   Caricamento...
                 </td>
               </tr>
@@ -100,7 +101,7 @@ export default function EntriesTable({
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-sm text-gray-400">
+                <td colSpan={9} className="py-12 text-center text-sm text-gray-400">
                   Nessuna voce trovata
                 </td>
               </tr>

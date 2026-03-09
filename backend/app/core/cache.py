@@ -354,9 +354,10 @@ class ResponseCache:
             logger.info("Custom stopword REMOVED: %r", word)
         return removed
 
-    async def get(self, question: str, generation: int) -> str | None:
-        """Look up a cached response. Returns response text or None.
+    async def get(self, question: str, generation: int) -> tuple[str, int] | None:
+        """Look up a cached response.
 
+        Returns (response_text, entry_id) on hit, or None on miss.
         Tries exact hash first, then normalized hash. On hit, updates
         hit_count and last_hit_at for LRU tracking.
         """
@@ -371,7 +372,7 @@ class ResponseCache:
         if row:
             await self._record_hit(row["id"])
             logger.info("Cache HIT (exact) for %r gen=%d", question[:60], generation)
-            return row["response"]
+            return (row["response"], row["id"])
 
         # Level 2: normalized match
         row = await self._fetchone(
@@ -381,13 +382,19 @@ class ResponseCache:
         if row:
             await self._record_hit(row["id"])
             logger.info("Cache HIT (normalized) for %r gen=%d", question[:60], generation)
-            return row["response"]
+            return (row["response"], row["id"])
 
         logger.info("Cache MISS for %r gen=%d", question[:60], generation)
         return None
 
-    async def put(self, question: str, generation: int, response: str) -> None:
-        """Store a response in the cache."""
+    async def put(
+        self,
+        question: str,
+        generation: int,
+        response: str,
+        feedback: str = "-",
+    ) -> int | None:
+        """Store a response in the cache. Returns the entry ID, or None if duplicate."""
         exact = _exact_hash(question)
         normal = _normal_hash(question)
 
@@ -397,16 +404,31 @@ class ResponseCache:
             (exact, generation),
         )
         if existing:
-            return
+            return existing["id"]
 
-        await self._db.execute(
+        cursor = await self._db.execute(
             """INSERT INTO response_cache
-               (exact_hash, normal_hash, question, generation, response)
-               VALUES (?, ?, ?, ?, ?)""",
-            (exact, normal, question, generation, response),
+               (exact_hash, normal_hash, question, generation, response, feedback)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (exact, normal, question, generation, response, feedback),
         )
         await self._db.commit()
-        logger.info("Cache STORE for %r gen=%d (%d chars)", question[:60], generation, len(response))
+        logger.info("Cache STORE for %r gen=%d (%d chars) feedback=%s",
+                     question[:60], generation, len(response), feedback)
+        return cursor.lastrowid
+
+    async def set_feedback(self, entry_id: int, feedback: str) -> bool:
+        """Set user feedback on a cache entry. Only V (correct) or F (wrong) allowed."""
+        if feedback not in ("V", "F"):
+            return False
+        cursor = await self._db.execute(
+            "UPDATE response_cache SET feedback = ? WHERE id = ?",
+            (feedback, entry_id),
+        )
+        await self._db.commit()
+        if cursor.rowcount > 0:
+            logger.info("Cache entry #%d feedback set to %s", entry_id, feedback)
+        return cursor.rowcount > 0
 
     async def invalidate_all(self, keep_reviewed: bool = True) -> int:
         """Clear the cache. Reviewed entries are preserved by default."""
@@ -500,7 +522,7 @@ class ResponseCache:
         cursor = await self._db.execute(
             f"""SELECT id, question, generation, response, hit_count,
                        reviewed, created_at, last_hit_at, reviewed_at,
-                       exact_hash, normal_hash
+                       exact_hash, normal_hash, feedback
                 FROM response_cache {where}
                 ORDER BY hit_count DESC, created_at DESC
                 LIMIT ? OFFSET ?""",
@@ -521,6 +543,7 @@ class ResponseCache:
                 "reviewed_at": r[8],
                 "exact_hash": r[9][:12] + "…",
                 "normal_hash": r[10][:12] + "…",
+                "feedback": r[11],
             }
             for r in rows
         ]
@@ -725,7 +748,7 @@ class ResponseCache:
         cursor = await self._db.execute(
             """SELECT id, question, generation, response, hit_count,
                       reviewed, exact_hash, normal_hash,
-                      created_at, last_hit_at, reviewed_at
+                      created_at, last_hit_at, reviewed_at, feedback
                FROM response_cache
                ORDER BY id"""
         )
@@ -743,6 +766,7 @@ class ResponseCache:
                 "created_at": r[8],
                 "last_hit_at": r[9],
                 "reviewed_at": r[10],
+                "feedback": r[11],
             }
             for r in rows
         ]

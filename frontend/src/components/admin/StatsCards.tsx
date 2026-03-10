@@ -4,6 +4,7 @@ import type { CacheStats } from "@/lib/admin-types";
 
 interface StatsCardsProps {
   stats: CacheStats | null;
+  vectorstoreCount: number | null;
 }
 
 function SkeletonCard() {
@@ -21,10 +22,11 @@ const CARDS = [
   { key: "reviewed_entries", label: "Revisionate", color: "text-emerald-600" },
 ] as const;
 
-export default function StatsCards({ stats }: StatsCardsProps) {
+export default function StatsCards({ stats, vectorstoreCount }: StatsCardsProps) {
   if (!stats) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <SkeletonCard />
         <SkeletonCard />
         <SkeletonCard />
         <SkeletonCard />
@@ -33,7 +35,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
       {CARDS.map(({ key, label, color }) => (
         <div
           key={key}
@@ -45,6 +47,14 @@ export default function StatsCards({ stats }: StatsCardsProps) {
           </p>
         </div>
       ))}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <p className="text-sm font-medium text-gray-500">Documenti RAG</p>
+        <p className="mt-1 text-3xl font-bold text-violet-600">
+          {vectorstoreCount !== null
+            ? vectorstoreCount.toLocaleString("it-IT")
+            : "—"}
+        </p>
+      </div>
     </div>
   );
 }

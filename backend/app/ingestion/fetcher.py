@@ -93,6 +93,83 @@ async def fetch_all_natures(client: PokeAPIClient):
     return await _fetch_batch(client, client.get_nature, ids, "Natures")
 
 
+async def fetch_regional_variants(
+    client: PokeAPIClient,
+    species_data: dict[int, dict],
+) -> dict[str, dict]:
+    """Fetch Pokemon data for regional variants (Alola, Galar, Hisui, Paldea).
+
+    Scans species data for non-default varieties with regional suffixes.
+    Returns dict keyed by variant name (e.g. 'raichu-alola').
+    """
+    REGIONAL_SUFFIXES = ("-alola", "-galar", "-hisui", "-paldea")
+    variant_names: list[str] = []
+
+    for sp in species_data.values():
+        for v in sp.get("varieties", []):
+            if v.get("is_default"):
+                continue
+            name = v["pokemon"]["name"]
+            if any(name.endswith(s) for s in REGIONAL_SUFFIXES):
+                variant_names.append(name)
+
+    results: dict[str, dict] = {}
+    skipped = 0
+    with tqdm(total=len(variant_names), desc="Regional Variants") as pbar:
+        for name in variant_names:
+            try:
+                data = await client.get_pokemon_by_name(name)
+                results[name] = data
+            except Exception as e:
+                skipped += 1
+                logger.debug("Skipped variant %s: %s", name, e)
+            pbar.update(1)
+
+    if skipped:
+        logger.info(
+            "Regional variants: fetched %d, skipped %d",
+            len(results), skipped,
+        )
+    return results
+
+
+async def fetch_all_encounters(
+    client: PokeAPIClient, max_id: int = 1025,
+) -> dict[int, list]:
+    """Fetch encounter data for all Pokemon. Returns {pokemon_id: encounter_list}.
+
+    The encounter endpoint returns a list (not a dict with 'id'), so we
+    cannot use _fetch_batch directly.
+    """
+    results: dict[int, list] = {}
+    skipped = 0
+    ids = list(range(1, max_id + 1))
+
+    with tqdm(total=len(ids), desc="Encounters") as pbar:
+        # Process in chunks to limit concurrency
+        chunk_size = 50
+        for start in range(0, len(ids), chunk_size):
+            chunk = ids[start : start + chunk_size]
+            tasks = {pid: client.get_encounters(pid) for pid in chunk}
+            for pid, coro in tasks.items():
+                try:
+                    data = await coro
+                    # Only store if there are encounters
+                    if data:
+                        results[pid] = data
+                except Exception as e:
+                    skipped += 1
+                    logger.debug("Skipped encounters for %d: %s", pid, e)
+                pbar.update(1)
+
+    if skipped:
+        logger.info(
+            "Encounters: fetched %d (non-empty), skipped %d",
+            len(results), skipped,
+        )
+    return results
+
+
 async def fetch_all_data(client: PokeAPIClient, max_pokemon_id: int = 1025):
     """Fetch all data from PokeAPI."""
     print("=== Fetching all Pokemon data from PokeAPI ===\n")
@@ -119,6 +196,12 @@ async def fetch_all_data(client: PokeAPIClient, max_pokemon_id: int = 1025):
     # Phase 7: Natures
     natures_data = await fetch_all_natures(client)
 
+    # Phase 8: Regional variants (Alola, Galar, Hisui, Paldea)
+    regional_data = await fetch_regional_variants(client, species_data)
+
+    # Phase 9: Encounters (location/version data)
+    encounters_data = await fetch_all_encounters(client, max_pokemon_id)
+
     print(f"\n=== Fetch complete ===")
     print(f"  Pokemon: {len(pokemon_data)}")
     print(f"  Species: {len(species_data)}")
@@ -128,6 +211,8 @@ async def fetch_all_data(client: PokeAPIClient, max_pokemon_id: int = 1025):
     print(f"  Abilities: {len(abilities_data)}")
     print(f"  Items: {len(items_data)}")
     print(f"  Natures: {len(natures_data)}")
+    print(f"  Regional variants: {len(regional_data)}")
+    print(f"  Encounters: {len(encounters_data)} (non-empty)")
 
     return {
         "pokemon": pokemon_data,
@@ -138,4 +223,6 @@ async def fetch_all_data(client: PokeAPIClient, max_pokemon_id: int = 1025):
         "abilities": abilities_data,
         "items": items_data,
         "natures": natures_data,
+        "regional_variants": regional_data,
+        "encounters": encounters_data,
     }

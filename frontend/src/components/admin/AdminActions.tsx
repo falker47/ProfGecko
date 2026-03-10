@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { invalidateCache, cleanupCache, rehashCache, getExportUrl, importCsv } from "@/lib/admin-api";
+import { invalidateCache, cleanupCache, rehashCache, getExportUrl, importCsv, reloadVectorstore } from "@/lib/admin-api";
 
 interface AdminActionsProps {
   secret: string;
@@ -16,6 +16,7 @@ export default function AdminActions({
 }: AdminActionsProps) {
   const [message, setMessage] = useState("");
   const [importing, setImporting] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function showMessage(text: string, duration = 5000) {
@@ -109,8 +110,40 @@ export default function AdminActions({
     }
   }
 
+  async function handleReloadVectorstore() {
+    if (!confirm("Ricaricare il vectorstore dal disco? Usalo dopo aver eseguito run_ingestion.bat.")) {
+      return;
+    }
+    setReloading(true);
+    try {
+      const res = await reloadVectorstore(secret);
+      showMessage(`Vectorstore ricaricato: ${res.documents_loaded.toLocaleString("it-IT")} documenti`);
+      onAction();
+    } catch (err) {
+      if (err instanceof Error && err.message === "AUTH_FAILED") {
+        onAuthFailed();
+      } else {
+        showMessage("Errore nel ricaricamento del vectorstore");
+      }
+    } finally {
+      setReloading(false);
+    }
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <button
+        onClick={handleReloadVectorstore}
+        disabled={reloading}
+        className={`rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 ${
+          reloading ? "cursor-not-allowed opacity-50" : ""
+        }`}
+      >
+        {reloading ? "Ricaricamento..." : "⟳ Ricarica Vectorstore"}
+      </button>
+
+      <div className="h-6 w-px bg-gray-300" />
+
       <button
         onClick={handleInvalidate}
         className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"

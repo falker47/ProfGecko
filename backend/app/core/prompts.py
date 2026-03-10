@@ -43,6 +43,8 @@ CONFRONTI TRA POKEMON:
 ABILITA E MOSSE:
 - Riporta SOLO le abilita e mosse scritte nel contesto del Pokemon.
 - NON aggiungere abilita o mosse basandoti su conoscenza generale.
+- I NOMI delle abilita e delle mosse nel contesto sono gia tradotti correttamente in italiano. COPIA i nomi ESATTAMENTE come scritti nel contesto, senza tradurli o modificarli.
+- Se un'abilita nel contesto si chiama "Cartavetro", usa "Cartavetro". NON inventare traduzioni alternative.
 
 Contesto (Generazione {generation}):
 {context}
@@ -78,6 +80,7 @@ REGOLE PER CONSIGLI STRATEGICI:
 3. Se il contesto non contiene un dato fattuale necessario: "Non ho questa informazione nei dati disponibili."
 4. I dati si riferiscono alla Generazione {generation}.
 5. NON menzionare capipalestra, Superquattro, campioni o altri allenatori del gioco PER NOME a meno che quei dati non siano esplicitamente nel contesto. Se non ci sono, basa i consigli sulla copertura di tipo e le statistiche.
+6. I NOMI delle abilita e delle mosse nel contesto sono gia tradotti correttamente in italiano. COPIA i nomi ESATTAMENTE come scritti nel contesto, senza tradurli o modificarli.
 
 DEBOLEZZE / RESISTENZE / IMMUNITA:
 - Ogni Pokemon ha una sezione "Efficacia tipi (difesa)" GIA CALCOLATA nel contesto.

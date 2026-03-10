@@ -9,7 +9,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app.core.cache import ResponseCache
-from app.core.generation_mapper import LATEST_GENERATION, detect_generation
+from app.core.generation_mapper import LATEST_GENERATION, detect_generation, detect_game_slug
 from app.core.prompts import PROF_GALLADE_SYSTEM_PROMPT, PROF_GALLADE_STRATEGIC_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,26 @@ _ITEM_KEYWORDS = frozenset({
 })
 _NATURE_KEYWORDS = frozenset({
     "natura", "nature", "natures", "indole",
+})
+
+# Keywords that trigger game_info document injection
+_GAME_INFO_KEYWORDS = frozenset({
+    "starter", "iniziale", "iniziali", "quale scegliere",
+    "esclusivo", "esclusivi", "esclusiva", "exclusive",
+    "solo in", "differenze versione",
+    "leggendario", "leggendari", "mitico", "mitici",
+})
+
+# Encounter documents are excluded by default (like items/natures) to prevent
+# them from flooding semantic search results. Only included when the user
+# explicitly asks about locations or catching.
+_ENCOUNTER_KEYWORDS = frozenset({
+    "dove", "trovare", "catturare", "cattura",
+    "percorso", "route", "grotta", "foresta",
+    "luogo", "posizione", "zona", "encounter",
+    "dove si trova", "dove trovo", "dove catturare",
+    "trovo", "trova", "ottengo", "ottenere", "prendere",
+    "beccare", "location", "incontro", "selvatico", "selvatici",
 })
 
 # Stop words italiane da ignorare nell'estrazione nomi entita.
@@ -51,12 +71,40 @@ _STOP_WORDS = frozenset({
     # Trainer / gym terms
     "capopalestra", "capipalestra", "superquattro",
     "campione", "champion", "palestra", "lega",
+    # Game info terms
+    "starter", "iniziale", "iniziali", "esclusivo", "esclusivi",
+    "leggendario", "leggendari",
+    # Game title words (prevent game names from being name candidates)
+    "rosso", "blu", "giallo", "oro", "argento", "cristallo",
+    "rubino", "zaffiro", "smeraldo",
+    "diamante", "perla", "platino",
+    "nero", "bianco",
+    "sole", "luna", "ultrasole", "ultraluna",
+    "spada", "scudo",
+    "scarlatto", "violetto",
+    # Breeding / egg group terms
+    "gruppo", "uova", "uovo", "breeding", "accoppiamento",
+    # Regional variant terms (adjectives only, not region names)
+    "alolano", "alolana", "forma",
+    "galariano", "galariana",
+    "hisuiano", "hisuiana",
+    "paldeano", "paldeana",
+    "regionale", "regionali", "variante", "varianti",
+    # Encounter/location terms
+    "dove", "trovare", "catturare", "cattura",
+    "percorso", "route", "grotta", "foresta",
+    "luogo", "posizione", "zona",
+    "trovo", "trova", "ottengo", "ottenere", "prendere",
+    "beccare", "selvatico", "selvatici", "incontro",
     # Termini Pokemon generici
     "pokemon", "pokémon",
-    "tipo", "tipi", "mossa", "mosse", "abilita", "stat", "statistiche",
-    "debolezze", "debolezza", "resistenze", "resistenza", "immunita",
+    "tipo", "tipi", "mossa", "mosse", "abilita", "abilità", "stat", "statistiche",
+    "debolezze", "debolezza", "resistenze", "resistenza", "immunita", "immunità",
     "generazione", "gen", "catena", "evolutiva", "evoluzione",
-    "base", "totale", "velocita", "attacco", "difesa", "speciale",
+    "base", "totale", "velocita", "velocità", "attacco", "difesa", "speciale",
+    # Verbi/termini aggiuntivi
+    "qual", "quale", "quando", "quanti", "quante",
+    "tasso", "crescita", "cattura",
 })
 
 # Soglia parole per considerare una domanda auto-contenuta (non un follow-up).
@@ -148,6 +196,8 @@ def _detect_excluded_types(question: str) -> list[str]:
         excluded.append("item")
     if not any(kw in q for kw in _NATURE_KEYWORDS):
         excluded.append("nature")
+    if not any(kw in q for kw in _ENCOUNTER_KEYWORDS):
+        excluded.append("encounter")
     return excluded
 
 
@@ -184,17 +234,39 @@ def _is_strategic_query(question: str) -> bool:
     return any(kw in q for kw in _STRATEGIC_KEYWORDS)
 
 
+# Region names used for compound variant name construction
+_REGION_NAMES = frozenset({"alola", "galar", "hisui", "paldea"})
+
+
 def _extract_candidate_names(question: str) -> list[str]:
     """Estrae parole candidate come nomi di entita dalla domanda.
 
     Ritorna parole di almeno 3 caratteri, rimuovendo stop words e
     punteggiatura. Usato per il matching diretto sui metadata ChromaDB.
+
+    Quando rileva una regione (alola, galar, hisui, paldea) insieme a un
+    nome Pokemon, costruisce anche il nome composto "pokemon-regione"
+    (es. "raichu-alola") per matchare le varianti regionali.
     """
     words = re.findall(r"[a-zA-ZÀ-ÿ\-]+", question.lower())
-    return [
+    base_candidates = [
         w for w in words
         if len(w) >= 3 and w not in _STOP_WORDS
     ]
+
+    # Detect regional names in the question (these are NOT in _STOP_WORDS)
+    regions_found = [w for w in base_candidates if w in _REGION_NAMES]
+    non_region = [w for w in base_candidates if w not in _REGION_NAMES]
+
+    # Build compound names: "pokemon-region" (e.g. "raichu-alola")
+    if regions_found and non_region:
+        compound_names = []
+        for name in non_region:
+            for region in regions_found:
+                compound_names.append(f"{name}-{region}")
+        # Put compound names first (more specific), then individual names
+        return compound_names + non_region
+    return base_candidates
 
 
 def _format_docs(docs: list[Document]) -> str:
@@ -448,6 +520,72 @@ class RAGChain:
             )
         return docs
 
+    def _find_game_info_docs(
+        self, generation: int, question: str,
+        game_slug: str | None = None,
+    ) -> list[Document]:
+        """Fetch game_info documents (starters, exclusives, legendaries).
+
+        When game_slug is provided (e.g. "platinum"), filters to that
+        specific game's documents. Otherwise returns all game_info docs
+        for the generation.
+        """
+        collection = self.vectorstore._collection
+        q = question.lower()
+
+        # Determine which categories to fetch based on keywords
+        categories: list[str] = []
+        if any(kw in q for kw in ("starter", "iniziale", "iniziali", "quale scegliere")):
+            categories.append("starters")
+        if any(kw in q for kw in ("esclusivo", "esclusivi", "esclusiva", "exclusive",
+                                   "solo in", "differenze versione")):
+            categories.append("version_exclusives")
+        if any(kw in q for kw in ("leggendario", "leggendari", "mitico", "mitici",
+                                   "dove trovare", "dove catturare")):
+            categories.append("legendaries")
+
+        if not categories:
+            return []
+
+        try:
+            conditions: list[dict] = [
+                {"generation": generation},
+                {"entity_type": "game_info"},
+            ]
+
+            # Filter by specific game if detected
+            if game_slug:
+                conditions.append({"game_slug": game_slug})
+
+            if len(categories) == 1:
+                conditions.append({"info_category": categories[0]})
+            else:
+                conditions.append({"info_category": {"$in": categories}})
+
+            where_filter = {"$and": conditions}
+            results = collection.get(
+                where=where_filter,
+                include=["documents", "metadatas"],
+            )
+        except Exception:
+            return []
+
+        docs = []
+        for j, doc_id in enumerate(results["ids"]):
+            docs.append(Document(
+                page_content=results["documents"][j],
+                metadata=results["metadatas"][j],
+            ))
+        if docs:
+            logger.info(
+                "Game info docs for gen %d (game=%s): found %d docs (categories: %s)",
+                generation,
+                game_slug or "all",
+                len(docs),
+                categories,
+            )
+        return docs
+
     def _retrieve(
         self,
         retrieval_query: str,
@@ -482,6 +620,37 @@ class RAGChain:
         trainer_docs: list[Document] = []
         if is_strategic:
             trainer_docs = self._find_trainer_docs(generation)
+
+        # Inietta game_info docs (starters, esclusivi, leggendari) se rilevanti
+        # Quando l'utente menziona un gioco specifico ("Pokemon Platino"),
+        # filtra i game_info docs per quel gioco anziche' restituire tutti
+        # quelli della generazione.
+        game_info_docs: list[Document] = []
+        game_slug: str | None = None
+        if any(kw in original_question.lower() for kw in _GAME_INFO_KEYWORDS):
+            game_slug = detect_game_slug(original_question)
+            game_info_docs = self._find_game_info_docs(
+                generation, original_question, game_slug=game_slug,
+            )
+            trainer_docs = trainer_docs + game_info_docs
+
+        # When game-specific docs are found, remove overlapping summary
+        # docs to prevent the generic gen-wide list from overriding
+        # game-specific data.  E.g. "leggendari in Platino" should show
+        # only Platino legendaries, not ALL gen-4 legendaries.
+        if game_slug and game_info_docs:
+            _INFO_TO_SUMMARY = {"legendaries": "legendary_mythical_list"}
+            info_cats = {d.metadata.get("info_category") for d in game_info_docs}
+            drop = {_INFO_TO_SUMMARY[c] for c in info_cats if c in _INFO_TO_SUMMARY}
+            if drop:
+                summary_docs = [
+                    d for d in summary_docs
+                    if d.metadata.get("summary_category") not in drop
+                ]
+                logger.info(
+                    "Dropped summary categories %s (game-specific docs for %s)",
+                    drop, game_slug,
+                )
 
         # Phase 1: exact name matching sui metadata
         # Usa sia la domanda originale che la retrieval_query arricchita
@@ -531,6 +700,8 @@ class RAGChain:
             # Ogni entity_type ha un identificatore univoco diverso
             if etype == "trainer_info":
                 return (etype, d.metadata.get("game_slug", ""), gen)
+            if etype == "game_info":
+                return (etype, d.metadata.get("info_category", ""), d.metadata.get("game_slug", ""), gen)
             if etype == "summary":
                 return (etype, d.metadata.get("summary_category", ""), gen)
             return (etype, d.metadata.get("name_en", ""), gen)
@@ -723,6 +894,17 @@ class RAGChain:
         word_count = len(question.split())
         has_prior_context = any(m["role"] == "assistant" for m in history_list)
         is_cacheable = not has_prior_context or word_count >= _SELF_CONTAINED_WORD_COUNT
+
+        # Game-specific game_info queries must bypass cache because the
+        # cache normalizes away game titles (e.g. "platino"), making
+        # "leggendari platino" hash-equal to "leggendari gen 4" despite
+        # requiring different answers (game-specific vs gen-wide).
+        if is_cacheable:
+            _game_slug = detect_game_slug(question)
+            if _game_slug and any(
+                kw in question.lower() for kw in _GAME_INFO_KEYWORDS
+            ):
+                is_cacheable = False
 
         if cache and is_cacheable:
             cached = await cache.get(question, generation)

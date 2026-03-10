@@ -94,3 +94,14 @@ class PokeAPIClient:
 
     async def get_generation(self, gen_id: int) -> dict:
         return await self.get(f"generation/{gen_id}")
+
+    async def get_pokemon_by_name(self, name: str) -> dict:
+        """Fetch Pokemon data by name slug (e.g. 'raichu-alola')."""
+        return await self.get(f"pokemon/{name}")
+
+    async def get_encounters(self, pokemon_id: int) -> list | dict:
+        """Fetch encounter/location data for a Pokemon.
+
+        Note: this endpoint returns a list, not a dict with 'id'.
+        """
+        return await self.get(f"pokemon/{pokemon_id}/encounters")

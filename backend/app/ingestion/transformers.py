@@ -7,6 +7,112 @@ from app.core.generation_mapper import (
     VERSION_GROUP_TO_GEN,
 )
 
+# --- Egg group EN → IT mapping (15 groups) ---
+
+EGG_GROUP_IT: dict[str, str] = {
+    "monster": "Mostro",
+    "dragon": "Drago",
+    "ground": "Campestre",
+    "bug": "Coleottero",
+    "flying": "Volante",
+    "fairy": "Fatato",
+    "plant": "Vegetale",
+    "humanshape": "Umanoide",
+    "human-like": "Umanoide",
+    "mineral": "Minerale",
+    "indeterminate": "Amorfo",
+    "water1": "Acqua 1",
+    "water2": "Acqua 2",
+    "water3": "Acqua 3",
+    "ditto": "Ditto",
+    "no-eggs": "Sconosciuto",
+}
+
+# --- Growth rate EN → IT mapping ---
+
+GROWTH_RATE_IT: dict[str, str] = {
+    "slow": "Lento (1.250.000 EXP)",
+    "medium": "Medio-Veloce (1.000.000 EXP)",
+    "medium-slow": "Medio-Lento (1.059.860 EXP)",
+    "fast": "Veloce (800.000 EXP)",
+    "slow-then-very-fast": "Erratico (600.000 EXP)",
+    "fast-then-very-slow": "Fluttuante (1.640.000 EXP)",
+}
+
+# --- Move ailment EN → IT mapping ---
+
+AILMENT_IT: dict[str, str] = {
+    "none": "",
+    "paralysis": "Paralisi",
+    "sleep": "Sonno",
+    "freeze": "Congelamento",
+    "burn": "Scottatura",
+    "poison": "Veleno",
+    "confusion": "Confusione",
+    "infatuation": "Infatuazione",
+    "trap": "Trappola",
+    "nightmare": "Incubo",
+    "torment": "Provocazione",
+    "disable": "Impedimento",
+    "yawn": "Sonnolenza",
+    "heal-block": "Anticura",
+    "no-type-immunity": "Rimozione immunita",
+    "leech-seed": "Parassiseme",
+    "embargo": "Embargo",
+    "perish-song": "Canto Perenne",
+    "ingrain": "Radicamento",
+    "tar-shot": "Colpo di Catrame",
+    "unknown": "Sconosciuto",
+}
+
+# --- Move target EN → IT mapping ---
+
+TARGET_IT: dict[str, str] = {
+    "selected-pokemon": "Un Pokemon selezionato",
+    "all-opponents": "Tutti gli avversari",
+    "user": "Utilizzatore",
+    "all-other-pokemon": "Tutti gli altri Pokemon",
+    "all-allies": "Tutti gli alleati",
+    "user-and-allies": "Utilizzatore e alleati",
+    "entire-field": "Tutto il campo",
+    "specific-move": "Mossa specifica",
+    "random-opponent": "Avversario casuale",
+    "users-field": "Campo alleato",
+    "opponents-field": "Campo avversario",
+    "ally": "Un alleato",
+    "user-or-ally": "Utilizzatore o alleato",
+    "all-pokemon": "Tutti i Pokemon",
+    "fainting-pokemon": "Pokemon in difficolta",
+}
+
+# --- Regional Pokedex name mapping ---
+
+POKEDEX_NAME_IT: dict[str, str] = {
+    "national": "Nazionale",
+    "kanto": "Kanto",
+    "original-johto": "Johto",
+    "updated-johto": "Johto (HGSS)",
+    "hoenn": "Hoenn",
+    "updated-hoenn": "Hoenn (ORAS)",
+    "original-sinnoh": "Sinnoh",
+    "extended-sinnoh": "Sinnoh (Platino)",
+    "original-unova": "Unima",
+    "updated-unova": "Unima (B2W2)",
+    "kalos-central": "Kalos Centrale",
+    "kalos-coastal": "Kalos Costiero",
+    "kalos-mountain": "Kalos Montano",
+    "original-alola": "Alola",
+    "updated-alola": "Alola (USUM)",
+    "letsgo-kanto": "Kanto (LGPE)",
+    "galar": "Galar",
+    "isle-of-armor": "Isola dell'Armatura",
+    "crown-tundra": "Landa Corona",
+    "hisui": "Hisui",
+    "paldea": "Paldea",
+    "kitakami": "Kitakami",
+    "blueberry": "Mirtillo",
+}
+
 # --- Helpers ---
 
 
@@ -39,16 +145,25 @@ def _get_stat(stats: list[dict], stat_name: str) -> int:
 def _format_evo_trigger(
     details: list[dict],
     item_name_lookup: dict[str, str] | None = None,
+    move_name_lookup: dict[str, str] | None = None,
+    species_name_lookup: dict[str, str] | None = None,
+    type_name_lookup: dict[str, str] | None = None,
 ) -> str:
     """Formatta il metodo di evoluzione dal campo evolution_details di PokeAPI.
 
     Restituisce una descrizione breve in italiano del trigger.
     item_name_lookup mappa slug EN -> nome IT (es. "sun-stone" -> "Pietra Solare").
+    move_name_lookup mappa slug EN -> nome IT mossa.
+    species_name_lookup mappa slug EN -> nome IT specie.
+    type_name_lookup mappa slug EN -> nome IT tipo.
     """
     if not details:
         return ""
 
     lookup = item_name_lookup or {}
+    move_lookup = move_name_lookup or {}
+    sp_lookup = species_name_lookup or {}
+    tp_lookup = type_name_lookup or {}
 
     # Prendi il primo dettaglio (di solito ce n'e' uno solo)
     d = details[0]
@@ -58,6 +173,17 @@ def _format_evo_trigger(
     held_item = d.get("held_item")
     happiness = d.get("min_happiness")
     time_of_day = d.get("time_of_day", "")
+    known_move = d.get("known_move")
+    known_move_type = d.get("known_move_type")
+    location = d.get("location")
+    party_species = d.get("party_species")
+    party_type = d.get("party_type")
+    trade_species = d.get("trade_species")
+    min_affection = d.get("min_affection")
+    min_beauty = d.get("min_beauty")
+    relative_physical_stats = d.get("relative_physical_stats")
+    needs_rain = d.get("needs_overworld_rain", False)
+    turn_upside_down = d.get("turn_upside_down", False)
 
     if trigger == "level-up":
         parts = []
@@ -65,11 +191,49 @@ def _format_evo_trigger(
             parts.append(f"Lv.{level}")
         if happiness is not None:
             parts.append("felicita")
+        if min_affection is not None:
+            parts.append("affetto")
+        if min_beauty is not None:
+            parts.append("bellezza")
         if time_of_day:
             tod_it = {"day": "giorno", "night": "notte"}.get(time_of_day, time_of_day)
             parts.append(f"di {tod_it}")
-        return f" ({', '.join(parts)})" if parts else ""
+        if known_move:
+            mv_slug = known_move.get("name", "")
+            mv_name = move_lookup.get(mv_slug, mv_slug.replace("-", " ").title())
+            parts.append(f"conoscendo {mv_name}")
+        if known_move_type:
+            tp_slug = known_move_type.get("name", "")
+            tp_name = tp_lookup.get(tp_slug, tp_slug.capitalize())
+            parts.append(f"con mossa tipo {tp_name}")
+        if location:
+            loc_name = location.get("name", "").replace("-", " ").title()
+            parts.append(f"a {loc_name}")
+        if party_species:
+            ps_slug = party_species.get("name", "")
+            ps_name = sp_lookup.get(ps_slug, ps_slug.capitalize())
+            parts.append(f"con {ps_name} in squadra")
+        if party_type:
+            pt_slug = party_type.get("name", "")
+            pt_name = tp_lookup.get(pt_slug, pt_slug.capitalize())
+            parts.append(f"con Pokemon tipo {pt_name} in squadra")
+        if needs_rain:
+            parts.append("sotto la pioggia")
+        if turn_upside_down:
+            parts.append("console capovolta")
+        if relative_physical_stats is not None:
+            rps_map = {1: "Att > Dif", -1: "Att < Dif", 0: "Att = Dif"}
+            parts.append(rps_map.get(relative_physical_stats, ""))
+        if held_item:
+            slug = held_item.get("name", "")
+            item_name = lookup.get(slug, slug.replace("-", " ").title())
+            parts.append(f"con {item_name}")
+        return f" ({', '.join(p for p in parts if p)})" if parts else ""
     elif trigger == "trade":
+        if trade_species:
+            ts_slug = trade_species.get("name", "")
+            ts_name = sp_lookup.get(ts_slug, ts_slug.capitalize())
+            return f" (scambio con {ts_name})"
         if held_item:
             slug = held_item.get("name", "")
             item_name = lookup.get(slug, slug.replace("-", " ").title())
@@ -83,6 +247,22 @@ def _format_evo_trigger(
         return " (strumento)"
     elif trigger == "shed":
         return " (slot vuoto + Poke Ball)"
+    elif trigger == "spin":
+        return " (girare su se stessi)"
+    elif trigger == "take-damage":
+        return " (subire danno)"
+    elif trigger == "tower-of-darkness":
+        return " (Torre delle Tenebre)"
+    elif trigger == "tower-of-waters":
+        return " (Torre delle Acque)"
+    elif trigger == "three-critical-hits":
+        return " (3 colpi critici)"
+    elif trigger == "agile-style-move":
+        return " (mossa stile rapido)"
+    elif trigger == "strong-style-move":
+        return " (mossa stile potente)"
+    elif trigger == "recoil-damage":
+        return " (danno da contraccolpo)"
     else:
         return ""
 
@@ -93,6 +273,8 @@ def _format_evolution_chain(
     generation: int,
     name_lookup: dict[str, str] | None = None,
     item_name_lookup: dict[str, str] | None = None,
+    move_name_lookup: dict[str, str] | None = None,
+    type_name_lookup: dict[str, str] | None = None,
 ) -> str:
     """Formatta la catena evolutiva con ramificazioni, metodi e filtro generazione.
 
@@ -123,13 +305,20 @@ def _format_evolution_chain(
 
     # Aggiungi il metodo di evoluzione (se presente)
     evo_details = chain.get("evolution_details", [])
-    trigger_text = _format_evo_trigger(evo_details, item_name_lookup)
+    trigger_text = _format_evo_trigger(
+        evo_details,
+        item_name_lookup=item_name_lookup,
+        move_name_lookup=move_name_lookup,
+        species_name_lookup=name_lookup,
+        type_name_lookup=type_name_lookup,
+    )
 
     # Raccoglie le evoluzioni valide per questa generazione
     branches: list[str] = []
     for evo in chain.get("evolves_to", []):
         branch_text = _format_evolution_chain(
             evo, species_data, generation, name_lookup, item_name_lookup,
+            move_name_lookup, type_name_lookup,
         )
         if branch_text:
             branches.append(branch_text)
@@ -504,6 +693,8 @@ def build_pokemon_documents(
                     generation,
                     name_lookup=species_name_it,
                     item_name_lookup=item_name_it,
+                    move_name_lookup=move_name_it,
+                    type_name_lookup=type_name_it,
                 )
 
         # Learnset for this generation (Italian move names)
@@ -550,10 +741,62 @@ def build_pokemon_documents(
         is_legendary = spec.get("is_legendary", False)
         is_mythical = spec.get("is_mythical", False)
 
+        # Egg groups (already in species data)
+        egg_groups_en = [eg["name"] for eg in spec.get("egg_groups", [])]
+        egg_groups_it = [EGG_GROUP_IT.get(eg, eg) for eg in egg_groups_en]
+
+        # Species info: growth rate, capture rate, happiness, hatch counter
+        growth_rate_en = spec.get("growth_rate", {}).get("name", "")
+        growth_rate_it = GROWTH_RATE_IT.get(growth_rate_en, growth_rate_en)
+        capture_rate = spec.get("capture_rate", 0)
+        base_happiness = spec.get("base_happiness", 0)
+        hatch_counter = spec.get("hatch_counter", 0)
+        hatch_steps = hatch_counter * 256 if hatch_counter else 0
+        is_baby = spec.get("is_baby", False)
+
+        # Pokedex numbers (regional dex entries)
+        pokedex_entries: list[str] = []
+        for pdx in spec.get("pokedex_numbers", []):
+            dex_name = pdx.get("pokedex", {}).get("name", "")
+            dex_num = pdx.get("entry_number", 0)
+            dex_name_it = POKEDEX_NAME_IT.get(dex_name)
+            if dex_name_it and dex_name != "national":
+                pokedex_entries.append(f"{dex_name_it}: #{dex_num}")
+
+        # Held items (items found on wild Pokemon)
+        held_items_text_parts: list[str] = []
+        for hi in poke.get("held_items", []):
+            hi_slug = hi.get("item", {}).get("name", "")
+            hi_name = item_name_it.get(hi_slug, hi_slug.replace("-", " ").title())
+            # Get version-specific rarities
+            version_parts: list[str] = []
+            for vd in hi.get("version_details", []):
+                v_slug = vd.get("version", {}).get("name", "")
+                v_gen = VERSION_TO_GEN.get(v_slug, 0)
+                if v_gen == generation:
+                    rarity = vd.get("rarity", 0)
+                    v_name_it = VERSION_NAME_IT.get(v_slug, v_slug)
+                    version_parts.append(f"{v_name_it} {rarity}%")
+            if version_parts:
+                held_items_text_parts.append(
+                    f"{hi_name} ({', '.join(version_parts)})"
+                )
+
         # Calculate dual-type effectiveness
         type_eff_text = _calculate_type_effectiveness(
             types_en, type_table, type_name_it,
         )
+
+        # Build optional sections
+        held_items_line = (
+            "Strumenti tenuti (Pokemon selvatici): " + "; ".join(held_items_text_parts)
+            if held_items_text_parts else ""
+        )
+        pokedex_line = (
+            "Numeri Pokedex regionali: " + ", ".join(pokedex_entries)
+            if pokedex_entries else ""
+        )
+        baby_line = "Pokemon Baby: Si" if is_baby else ""
 
         page_content = f"""\
 Nome: {name_it} (#{pid})
@@ -583,6 +826,12 @@ Abilita nascosta: {hidden_ability_desc or 'Nessuna'}
 
 Catena evolutiva: {evo_text or 'Nessuna evoluzione'}
 
+Gruppo uova: {', '.join(egg_groups_it) if egg_groups_it else 'Sconosciuto'}
+Tasso di crescita: {growth_rate_it}
+Tasso di cattura: {capture_rate}
+Felicita base: {base_happiness}
+Passi per schiudersi: {hatch_steps}
+
 Descrizione Pokedex:
 {flavor}
 
@@ -591,6 +840,14 @@ Mosse apprendibili (Generazione {generation}):
 
 Leggendario: {'Si' if is_legendary else 'No'}
 Misterioso: {'Si' if is_mythical else 'No'}"""
+
+        # Append optional sections
+        if baby_line:
+            page_content += f"\n{baby_line}"
+        if held_items_line:
+            page_content += f"\n{held_items_line}"
+        if pokedex_line:
+            page_content += f"\n{pokedex_line}"
 
         metadata = {
             "entity_type": "pokemon",
@@ -602,7 +859,10 @@ Misterioso: {'Si' if is_mythical else 'No'}"""
             "gen_introduced": gen_introduced,
             "is_legendary": is_legendary,
             "is_mythical": is_mythical,
+            "is_baby": is_baby,
             "bst": bst,
+            "egg_groups": egg_groups_en or ["unknown"],
+            "capture_rate": capture_rate,
         }
 
         docs.append(Document(page_content=page_content, metadata=metadata))
@@ -1381,6 +1641,74 @@ def build_move_documents(
         accuracy_str = f"{stats['accuracy']}%" if stats["accuracy"] else "-"
         pp_str = str(stats["pp"]) if stats["pp"] else "-"
 
+        # Priority
+        priority = move.get("priority", 0)
+        priority_str = ""
+        if priority != 0:
+            priority_str = f"\nPriorita: {'+' if priority > 0 else ''}{priority}"
+
+        # Meta fields (ailment, flinch, drain, crit, healing)
+        meta = move.get("meta") or {}
+        meta_lines: list[str] = []
+
+        ailment_slug = meta.get("ailment", {}).get("name", "none")
+        ailment_chance = meta.get("ailment_chance", 0)
+        ailment_it = AILMENT_IT.get(ailment_slug, ailment_slug)
+        if ailment_it and ailment_slug != "none":
+            meta_lines.append(
+                f"Stato inflitto: {ailment_it}"
+                + (f" ({ailment_chance}%)" if ailment_chance and ailment_chance < 100 else "")
+            )
+
+        flinch_chance = meta.get("flinch_chance", 0)
+        if flinch_chance:
+            meta_lines.append(f"Tentennamento: {flinch_chance}%")
+
+        drain = meta.get("drain", 0)
+        if drain > 0:
+            meta_lines.append(f"Assorbimento: {drain}% del danno inflitto")
+        elif drain < 0:
+            meta_lines.append(f"Contraccolpo: {abs(drain)}% del danno inflitto")
+
+        healing = meta.get("healing", 0)
+        if healing > 0:
+            meta_lines.append(f"Cura: {healing}% degli HP massimi")
+
+        crit_rate = meta.get("crit_rate", 0)
+        if crit_rate > 0:
+            meta_lines.append(f"Tasso critico aumentato: +{crit_rate}")
+
+        # Stat changes (top-level field)
+        stat_changes = move.get("stat_changes", [])
+        if stat_changes:
+            stat_it_map = {
+                "attack": "Attacco", "defense": "Difesa",
+                "special-attack": "Att.Sp", "special-defense": "Dif.Sp",
+                "speed": "Velocita", "accuracy": "Precisione",
+                "evasion": "Elusione", "hp": "HP",
+            }
+            sc_parts = []
+            for sc in stat_changes:
+                sc_name = stat_it_map.get(
+                    sc.get("stat", {}).get("name", ""), "?"
+                )
+                sc_change = sc.get("change", 0)
+                sc_parts.append(
+                    f"{sc_name} {'+' if sc_change > 0 else ''}{sc_change}"
+                )
+            stat_chance = meta.get("stat_chance", 0)
+            if sc_parts:
+                sc_text = "Modifica statistiche: " + ", ".join(sc_parts)
+                if stat_chance and stat_chance < 100:
+                    sc_text += f" ({stat_chance}%)"
+                meta_lines.append(sc_text)
+
+        meta_text = "\n".join(meta_lines)
+
+        # Target
+        target_slug = move.get("target", {}).get("name", "")
+        target_it = TARGET_IT.get(target_slug, target_slug.replace("-", " "))
+
         page_content = f"""\
 Mossa: {name_it}
 Nome inglese: {name_en}
@@ -1388,8 +1716,12 @@ Tipo: {type_it}
 Categoria: {damage_class_it}
 Potenza: {power_str}
 Precisione: {accuracy_str}
-PP: {pp_str}
+PP: {pp_str}{priority_str}
+Bersaglio: {target_it}
 Effetto: {stats['effect']}"""
+
+        if meta_text:
+            page_content += f"\n{meta_text}"
 
         metadata = {
             "entity_type": "move",
@@ -1399,6 +1731,7 @@ Effetto: {stats['effect']}"""
             "type": type_en,
             "generation": generation,
             "damage_class": damage_class,
+            "priority": priority,
         }
 
         docs.append(Document(page_content=page_content, metadata=metadata))
@@ -1428,10 +1761,23 @@ def build_type_documents(
     types_data: dict[int, dict],
     generation: int,
     type_name_it: dict[str, str] | None = None,
+    species_data: dict[int, dict] | None = None,
+    pokemon_data: dict[int, dict] | None = None,
 ) -> list[Document]:
     """Build one Document per type for the given generation."""
     if type_name_it is None:
         type_name_it = _build_type_name_lookup(types_data)
+
+    # Build species name lookup for Pokemon list
+    sp_name_it: dict[str, str] = {}
+    if species_data:
+        for sp in species_data.values():
+            slug = sp.get("name", "")
+            it = _get_localized(sp.get("names", []), "it")
+            if slug and it:
+                sp_name_it[slug] = it
+
+    max_id = MAX_POKEMON_PER_GEN.get(generation, 1025) if pokemon_data else 0
 
     docs = []
 
@@ -1460,6 +1806,27 @@ def build_type_documents(
         resists = names_it(relations.get("half_damage_from", []))
         immune_to = names_it(relations.get("no_damage_from", []))
 
+        # Build Pokemon list for this type (filtered by generation)
+        type_pokemon_names: list[str] = []
+        if pokemon_data and species_data:
+            for entry in type_data.get("pokemon", []):
+                poke_name = entry.get("pokemon", {}).get("name", "")
+                poke_url = entry.get("pokemon", {}).get("url", "")
+                poke_id = int(poke_url.rstrip("/").split("/")[-1]) if poke_url else 0
+                if poke_id < 1 or poke_id > max_id:
+                    continue
+                if poke_id not in pokemon_data:
+                    continue
+                it_name = sp_name_it.get(poke_name, poke_name.capitalize())
+                type_pokemon_names.append(it_name)
+
+        pokemon_list_text = ""
+        if type_pokemon_names:
+            pokemon_list_text = (
+                f"\n\nPokemon di tipo {name_it} ({len(type_pokemon_names)}):\n"
+                + ", ".join(sorted(type_pokemon_names))
+            )
+
         page_content = f"""\
 Tipo: {name_it}
 
@@ -1473,12 +1840,16 @@ Difesa - Immune (x0) a: {', '.join(immune_to) or 'Nessuno'}
 
 Nota: per Pokemon doppio tipo, moltiplicare i fattori di ciascun tipo."""
 
+        if pokemon_list_text:
+            page_content += pokemon_list_text
+
         metadata = {
             "entity_type": "type",
             "type_id": tid,
             "name_en": name_en,
             "name_it": name_it.lower(),
             "generation": generation,
+            "pokemon_count": len(type_pokemon_names),
         }
 
         docs.append(Document(page_content=page_content, metadata=metadata))
@@ -1492,8 +1863,21 @@ Nota: per Pokemon doppio tipo, moltiplicare i fattori di ciascun tipo."""
 def build_ability_documents(
     abilities_data: dict[int, dict],
     generation: int,
+    species_data: dict[int, dict] | None = None,
+    pokemon_data: dict[int, dict] | None = None,
 ) -> list[Document]:
     """Build one Document per ability for the given generation."""
+    # Build species name lookup for Pokemon list
+    sp_name_it: dict[str, str] = {}
+    if species_data:
+        for sp in species_data.values():
+            slug = sp.get("name", "")
+            it = _get_localized(sp.get("names", []), "it")
+            if slug and it:
+                sp_name_it[slug] = it
+
+    max_id = MAX_POKEMON_PER_GEN.get(generation, 1025) if pokemon_data else 0
+
     docs = []
 
     for aid, ability in abilities_data.items():
@@ -1528,11 +1912,44 @@ def build_ability_documents(
                 ability.get("flavor_text_entries", []), "en"
             )
 
+        # Build Pokemon list for this ability (filtered by generation)
+        ab_pokemon_normal: list[str] = []
+        ab_pokemon_hidden: list[str] = []
+        if pokemon_data and species_data:
+            for entry in ability.get("pokemon", []):
+                poke_name = entry.get("pokemon", {}).get("name", "")
+                poke_url = entry.get("pokemon", {}).get("url", "")
+                poke_id = int(poke_url.rstrip("/").split("/")[-1]) if poke_url else 0
+                if poke_id < 1 or poke_id > max_id:
+                    continue
+                if poke_id not in pokemon_data:
+                    continue
+                it_name = sp_name_it.get(poke_name, poke_name.capitalize())
+                if entry.get("is_hidden"):
+                    ab_pokemon_hidden.append(it_name)
+                else:
+                    ab_pokemon_normal.append(it_name)
+
+        pokemon_text_parts: list[str] = []
+        if ab_pokemon_normal:
+            pokemon_text_parts.append(
+                f"Pokemon con questa abilita ({len(ab_pokemon_normal)}): "
+                + ", ".join(sorted(ab_pokemon_normal))
+            )
+        if ab_pokemon_hidden:
+            pokemon_text_parts.append(
+                f"Pokemon con questa abilita nascosta ({len(ab_pokemon_hidden)}): "
+                + ", ".join(sorted(ab_pokemon_hidden))
+            )
+
         page_content = f"""\
 Abilita: {name_it}
 Nome inglese: {name_en}
 Effetto: {effect}
 Descrizione: {flavor}"""
+
+        if pokemon_text_parts:
+            page_content += "\n" + "\n".join(pokemon_text_parts)
 
         metadata = {
             "entity_type": "ability",
@@ -1540,6 +1957,7 @@ Descrizione: {flavor}"""
             "name_en": name_en.lower(),
             "name_it": name_it.lower(),
             "generation": generation,
+            "pokemon_count": len(ab_pokemon_normal) + len(ab_pokemon_hidden),
         }
 
         docs.append(Document(page_content=page_content, metadata=metadata))
@@ -1791,6 +2209,463 @@ def build_trainer_documents(generation: int) -> list[Document]:
     return docs
 
 
+# --- Game Static Data Documents (starters, exclusives, legendaries) ---
+
+
+def build_game_data_documents(generation: int) -> list[Document]:
+    """Build documents for starters, version exclusives and legendaries.
+
+    Uses static data from game_data.py. Produces up to 3 documents per game
+    slug that matches the given generation.
+    """
+    from app.ingestion.game_data import GAME_STATIC_DATA
+
+    docs: list[Document] = []
+    for slug, data in GAME_STATIC_DATA.items():
+        if data["generation"] != generation:
+            continue
+
+        game_it = data["game_it"]
+        region = data["region_it"]
+
+        # --- Starters document ---
+        starters = data.get("starters", [])
+        if starters:
+            lines = [
+                f"Starter Pokemon in {game_it} "
+                f"(Generazione {generation}, regione {region}):",
+                "",
+            ]
+            for s in starters:
+                lines.append(f"- {s['name']} ({s['type_it']})")
+            lines.append("")
+            lines.append(
+                "Nota: lo starter scelto all'inizio del gioco non preclude "
+                "la cattura di nessun altro Pokemon."
+            )
+            docs.append(Document(
+                page_content="\n".join(lines),
+                metadata={
+                    "entity_type": "game_info",
+                    "info_category": "starters",
+                    "generation": generation,
+                    "game_slug": slug,
+                    "game_it": game_it,
+                    "region": region,
+                },
+            ))
+
+        # --- Version exclusives document ---
+        exclusives = data.get("version_exclusives", {})
+        if exclusives:
+            lines = [
+                f"Pokemon esclusivi per versione - {game_it} "
+                f"(Generazione {generation}):",
+                "",
+            ]
+            for version, poke_list in exclusives.items():
+                lines.append(
+                    f"Esclusivi di {version}: {', '.join(poke_list)}"
+                )
+            lines.append("")
+            lines.append(
+                "Per completare il Pokedex e necessario scambiare "
+                "con l'altra versione."
+            )
+            docs.append(Document(
+                page_content="\n".join(lines),
+                metadata={
+                    "entity_type": "game_info",
+                    "info_category": "version_exclusives",
+                    "generation": generation,
+                    "game_slug": slug,
+                    "game_it": game_it,
+                    "region": region,
+                },
+            ))
+
+        # --- Legendaries document ---
+        legendaries = data.get("legendaries", [])
+        if legendaries:
+            lines = [
+                f"Pokemon Leggendari in {game_it} "
+                f"(Generazione {generation}, regione {region}):",
+                "",
+            ]
+            for leg in legendaries:
+                lines.append(
+                    f"- {leg['name']} ({leg['type_it']}) - {leg['location']}"
+                )
+            docs.append(Document(
+                page_content="\n".join(lines),
+                metadata={
+                    "entity_type": "game_info",
+                    "info_category": "legendaries",
+                    "generation": generation,
+                    "game_slug": slug,
+                    "game_it": game_it,
+                    "region": region,
+                },
+            ))
+
+    return docs
+
+
+# --- Regional Variant Documents ---
+
+# Maps regional suffix to the generation that introduced the form
+_VARIANT_REGION_TO_GEN: dict[str, int] = {
+    "alola": 7,
+    "galar": 8,
+    "hisui": 8,  # Legends: Arceus counts as gen 8
+    "paldea": 9,
+}
+
+_REGION_NAME_IT: dict[str, str] = {
+    "alola": "Alola",
+    "galar": "Galar",
+    "hisui": "Hisui",
+    "paldea": "Paldea",
+}
+
+
+def build_regional_variant_documents(
+    regional_data: dict[str, dict],
+    pokemon_data: dict[int, dict],
+    species_data: dict[int, dict],
+    all_types: dict[int, dict],
+    generation: int,
+    type_name_it: dict[str, str] | None = None,
+    abilities_data: dict[int, dict] | None = None,
+) -> list[Document]:
+    """Build one Document per regional variant available in this generation.
+
+    Regional variants use entity_type='pokemon' so existing retrieval
+    (name matching) works seamlessly.
+    """
+    if type_name_it is None:
+        type_name_it = _build_type_name_lookup(all_types)
+
+    # Build ability name lookup
+    ability_name_it: dict[str, str] = {}
+    if abilities_data:
+        for ab in abilities_data.values():
+            slug = ab["name"]
+            it_name = _get_localized(ab.get("names", []), "it")
+            ability_name_it[slug] = it_name or slug.replace("-", " ").title()
+
+    docs: list[Document] = []
+
+    for variant_name, vdata in regional_data.items():
+        # Determine region from name suffix
+        region_key = ""
+        for suffix in _VARIANT_REGION_TO_GEN:
+            if variant_name.endswith(f"-{suffix}"):
+                region_key = suffix
+                break
+        if not region_key:
+            continue
+
+        # Only include if this generation >= the introduction generation
+        intro_gen = _VARIANT_REGION_TO_GEN[region_key]
+        if generation < intro_gen:
+            continue
+
+        region_it = _REGION_NAME_IT.get(region_key, region_key.title())
+
+        # Base Pokemon name (e.g. "raichu" from "raichu-alola")
+        base_name = variant_name.rsplit(f"-{region_key}", 1)[0]
+
+        # Get species data for the base form (for Italian name, egg groups)
+        base_spec = None
+        for sp in species_data.values():
+            if sp.get("name") == base_name:
+                base_spec = sp
+                break
+
+        base_name_it = ""
+        if base_spec:
+            base_name_it = _get_localized(base_spec.get("names", []), "it") or base_name.title()
+        else:
+            base_name_it = base_name.title()
+
+        variant_name_it = f"{base_name_it} di {region_it}"
+
+        # Types
+        types_en = [t["type"]["name"] for t in vdata.get("types", [])]
+        types_it = [type_name_it.get(t, t) for t in types_en]
+
+        # Stats
+        hp = _get_stat(vdata["stats"], "hp")
+        atk = _get_stat(vdata["stats"], "attack")
+        defense = _get_stat(vdata["stats"], "defense")
+        sp_atk = _get_stat(vdata["stats"], "special-attack")
+        sp_def = _get_stat(vdata["stats"], "special-defense")
+        speed = _get_stat(vdata["stats"], "speed")
+        bst = hp + atk + defense + sp_atk + sp_def + speed
+
+        # Abilities
+        abilities_list: list[str] = []
+        hidden_ab = ""
+        for ab_entry in vdata.get("abilities", []):
+            slug = ab_entry["ability"]["name"]
+            ab_it = ability_name_it.get(slug, slug.replace("-", " ").title())
+            if ab_entry.get("is_hidden"):
+                hidden_ab = ab_it
+            else:
+                abilities_list.append(ab_it)
+
+        # Variant ID
+        variant_id = vdata.get("id", 0)
+
+        # Compare with base form
+        base_poke = None
+        for pid, p in pokemon_data.items():
+            if p.get("name") == base_name:
+                base_poke = p
+                break
+
+        diff_lines: list[str] = []
+        if base_poke:
+            base_types_en = [t["type"]["name"] for t in base_poke.get("types", [])]
+            base_types_it = [type_name_it.get(t, t) for t in base_types_en]
+            if types_it != base_types_it:
+                diff_lines.append(
+                    f"- Tipo: {', '.join(types_it)} (base: {', '.join(base_types_it)})"
+                )
+            base_bst = sum(
+                _get_stat(base_poke["stats"], s)
+                for s in ("hp", "attack", "defense", "special-attack",
+                          "special-defense", "speed")
+            )
+            if bst != base_bst:
+                diff_lines.append(f"- BST: {bst} (base: {base_bst})")
+
+        diff_text = "\n".join(diff_lines) if diff_lines else "Nessuna differenza significativa"
+
+        # Egg groups from base species
+        egg_groups_en = []
+        egg_groups_it_str = "Sconosciuto"
+        if base_spec:
+            egg_groups_en = [eg["name"] for eg in base_spec.get("egg_groups", [])]
+            egg_groups_it = [EGG_GROUP_IT.get(eg, eg) for eg in egg_groups_en]
+            egg_groups_it_str = ", ".join(egg_groups_it) if egg_groups_it else "Sconosciuto"
+
+        page_content = f"""\
+Nome: {variant_name_it} (Forma Regionale)
+Nome inglese: {variant_name.replace('-', ' ').title()}
+Forma base: {base_name_it}
+Regione: {region_it} (Generazione {intro_gen})
+Tipi: {', '.join(types_it)}
+
+Statistiche base:
+- HP: {hp}
+- Attacco: {atk}
+- Difesa: {defense}
+- Attacco Speciale: {sp_atk}
+- Difesa Speciale: {sp_def}
+- Velocita: {speed}
+- Totale: {bst}
+
+Differenze dalla forma base:
+{diff_text}
+
+Abilita: {', '.join(abilities_list) if abilities_list else 'Nessuna'}
+Abilita nascosta: {hidden_ab or 'Nessuna'}
+
+Gruppo uova: {egg_groups_it_str}"""
+
+        metadata = {
+            "entity_type": "pokemon",
+            "pokemon_id": variant_id,
+            "name_en": variant_name,
+            "name_it": variant_name_it.lower(),
+            "types": types_en,
+            "generation": generation,
+            "gen_introduced": intro_gen,
+            "is_legendary": False,
+            "is_mythical": False,
+            "bst": bst,
+            "egg_groups": egg_groups_en or ["unknown"],
+            "is_regional_variant": True,
+            "variant_region": region_key,
+            "base_pokemon_name": base_name,
+        }
+
+        docs.append(Document(page_content=page_content, metadata=metadata))
+
+    return docs
+
+
+# --- Encounter / Location Documents ---
+
+# Maps PokeAPI version slug to Italian name
+VERSION_NAME_IT: dict[str, str] = {
+    "red": "Rosso", "blue": "Blu", "yellow": "Giallo",
+    "gold": "Oro", "silver": "Argento", "crystal": "Cristallo",
+    "ruby": "Rubino", "sapphire": "Zaffiro", "emerald": "Smeraldo",
+    "firered": "Rosso Fuoco", "leafgreen": "Verde Foglia",
+    "diamond": "Diamante", "pearl": "Perla", "platinum": "Platino",
+    "heartgold": "Oro HeartGold", "soulsilver": "Argento SoulSilver",
+    "black": "Nero", "white": "Bianco",
+    "black-2": "Nero 2", "white-2": "Bianco 2",
+    "x": "X", "y": "Y",
+    "omega-ruby": "Rubino Omega", "alpha-sapphire": "Zaffiro Alpha",
+    "sun": "Sole", "moon": "Luna",
+    "ultra-sun": "Ultrasole", "ultra-moon": "Ultraluna",
+    "lets-go-pikachu": "Let's Go Pikachu",
+    "lets-go-eevee": "Let's Go Eevee",
+    "sword": "Spada", "shield": "Scudo",
+    "brilliant-diamond": "Diamante Lucente",
+    "shining-pearl": "Perla Splendente",
+    "legends-arceus": "Leggende Arceus",
+    "scarlet": "Scarlatto", "violet": "Violetto",
+}
+
+# Maps PokeAPI version slug to generation number
+VERSION_TO_GEN: dict[str, int] = {
+    "red": 1, "blue": 1, "yellow": 1,
+    "gold": 2, "silver": 2, "crystal": 2,
+    "ruby": 3, "sapphire": 3, "emerald": 3,
+    "firered": 3, "leafgreen": 3,
+    "diamond": 4, "pearl": 4, "platinum": 4,
+    "heartgold": 4, "soulsilver": 4,
+    "black": 5, "white": 5, "black-2": 5, "white-2": 5,
+    "x": 6, "y": 6, "omega-ruby": 6, "alpha-sapphire": 6,
+    "sun": 7, "moon": 7, "ultra-sun": 7, "ultra-moon": 7,
+    "lets-go-pikachu": 7, "lets-go-eevee": 7,
+    "sword": 8, "shield": 8,
+    "brilliant-diamond": 8, "shining-pearl": 8,
+    "legends-arceus": 8,
+    "scarlet": 9, "violet": 9,
+}
+
+
+def _format_location_name(slug: str) -> str:
+    """Convert PokeAPI location area slug to readable name.
+
+    'viridian-forest-area' -> 'Viridian Forest'
+    'kanto-route-2-area' -> 'Kanto Route 2'
+    """
+    name = slug.replace("-", " ").title()
+    # Remove trailing "Area" if present
+    if name.endswith(" Area"):
+        name = name[:-5].rstrip()
+    return name
+
+
+def _format_encounter_method(method_slug: str) -> str:
+    """Translate encounter method to short Italian label."""
+    methods = {
+        "walk": "erba", "old-rod": "Amo Vecchio",
+        "good-rod": "Amo Buono", "super-rod": "Super Amo",
+        "surf": "surf", "rock-smash": "spaccaroccia",
+        "headbutt": "Colpoditesta", "gift": "regalo",
+        "gift-egg": "uovo regalo",
+    }
+    return methods.get(method_slug, method_slug.replace("-", " "))
+
+
+def build_encounter_documents(
+    encounters_data: dict[int, list],
+    species_data: dict[int, dict],
+    generation: int,
+) -> list[Document]:
+    """Build one encounter Document per Pokemon per generation.
+
+    Groups all locations and versions for a Pokemon within a single
+    generation into one document. Skips Pokemon with no encounters
+    in the target generation.
+    """
+    docs: list[Document] = []
+
+    for pid, encounter_list in encounters_data.items():
+        spec = species_data.get(pid)
+        if not spec:
+            continue
+
+        name_en = spec.get("name", f"pokemon-{pid}").capitalize()
+        name_it = _get_localized(spec.get("names", []), "it") or name_en
+
+        # Group encounters by version for this generation
+        # Structure: {version_it: [(location, method, min_lv, max_lv, chance), ...]}
+        version_encounters: dict[str, list[tuple[str, str, int, int, int]]] = {}
+
+        for loc_entry in encounter_list:
+            location = _format_location_name(
+                loc_entry.get("location_area", {}).get("name", "unknown")
+            )
+            for vd in loc_entry.get("version_details", []):
+                version_slug = vd.get("version", {}).get("name", "")
+                vgen = VERSION_TO_GEN.get(version_slug)
+                if vgen != generation:
+                    continue
+
+                version_it = VERSION_NAME_IT.get(version_slug, version_slug)
+
+                for enc in vd.get("encounter_details", []):
+                    method = _format_encounter_method(
+                        enc.get("method", {}).get("name", "walk")
+                    )
+                    min_lv = enc.get("min_level", 0)
+                    max_lv = enc.get("max_level", 0)
+                    chance = enc.get("chance", 0)
+
+                    if version_it not in version_encounters:
+                        version_encounters[version_it] = []
+                    version_encounters[version_it].append(
+                        (location, method, min_lv, max_lv, chance)
+                    )
+
+        if not version_encounters:
+            continue
+
+        # Build document text
+        lines = [f"Dove trovare {name_it} (Generazione {generation}):", ""]
+
+        for version_it, encounters in sorted(version_encounters.items()):
+            lines.append(f"Pokemon {version_it}:")
+
+            # Deduplicate and aggregate by location
+            loc_data: dict[str, list[str]] = {}
+            for loc, method, min_lv, max_lv, chance in encounters:
+                if loc not in loc_data:
+                    loc_data[loc] = []
+                if min_lv == max_lv:
+                    detail = f"{method}, Lv.{min_lv}, {chance}%"
+                else:
+                    detail = f"{method}, Lv.{min_lv}-{max_lv}, {chance}%"
+                if detail not in loc_data[loc]:
+                    loc_data[loc].append(detail)
+
+            for loc, details in loc_data.items():
+                # Truncate details if too many
+                if len(details) > 3:
+                    details = details[:3] + ["..."]
+                lines.append(f"- {loc} ({'; '.join(details)})")
+
+            lines.append("")
+
+        content = "\n".join(lines).rstrip()
+
+        # Truncate if document is too long (keep under ~1500 chars)
+        if len(content) > 1500:
+            content = content[:1450] + "\n\n[dati aggiuntivi troncati]"
+
+        docs.append(Document(
+            page_content=content,
+            metadata={
+                "entity_type": "encounter",
+                "pokemon_id": pid,
+                "name_en": name_en.lower(),
+                "name_it": name_it.lower(),
+                "generation": generation,
+            },
+        ))
+
+    return docs
+
+
 def build_all_documents_for_generation(
     all_data: dict,
     generation: int,
@@ -1850,11 +2725,15 @@ def build_all_documents_for_generation(
         all_data["types"],
         generation,
         type_name_it=type_name_it,
+        species_data=all_data.get("species"),
+        pokemon_data=all_data.get("pokemon"),
     ))
 
     docs.extend(build_ability_documents(
         all_data["abilities"],
         generation,
+        species_data=all_data.get("species"),
+        pokemon_data=all_data.get("pokemon"),
     ))
 
     # Items only for the latest gen (no historical tracking available)
@@ -1870,5 +2749,27 @@ def build_all_documents_for_generation(
     ))
 
     docs.extend(build_trainer_documents(generation))
+
+    docs.extend(build_game_data_documents(generation))
+
+    # Regional variants (if fetched)
+    if all_data.get("regional_variants"):
+        docs.extend(build_regional_variant_documents(
+            all_data["regional_variants"],
+            all_data["pokemon"],
+            all_data["species"],
+            all_data["types"],
+            generation,
+            type_name_it=type_name_it,
+            abilities_data=all_data.get("abilities"),
+        ))
+
+    # Encounters (if fetched)
+    if all_data.get("encounters"):
+        docs.extend(build_encounter_documents(
+            all_data["encounters"],
+            all_data["species"],
+            generation,
+        ))
 
     return docs

@@ -254,6 +254,24 @@ export async function getDuplicateGroups(
   return res.json();
 }
 
+// ── Vectorstore ──────────────────────────────────────────────────
+
+export async function getVectorstoreStats(
+  secret: string,
+): Promise<{ documents_count: number }> {
+  const res = await adminFetch(secret, "/api/admin/vectorstore/stats");
+  return res.json();
+}
+
+export async function reloadVectorstore(
+  secret: string,
+): Promise<{ status: string; documents_loaded: number }> {
+  const res = await adminFetch(secret, "/api/admin/reload-vectorstore", {
+    method: "POST",
+  });
+  return res.json();
+}
+
 // ── Export URL (no fetch, just builds the URL) ────────────────────
 
 export function getExportUrl(secret: string): string {

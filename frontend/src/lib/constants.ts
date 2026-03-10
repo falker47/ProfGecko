@@ -44,6 +44,11 @@ export const SUGGESTED_QUESTIONS: string[] = [
   "Quali sono i capipalestra di Pokemon Oro?",
   "Che mosse impara Pikachu in Pokemon Rosso?",
   "Quali Pokemon leggendari ci sono in terza generazione?",
+  // Starter e dati di gioco
+  "Quali sono gli starter di Pokemon Platino?",
+  "Quali Pokemon sono esclusivi di Pokemon Spada?",
+  // Varianti regionali
+  "Quali sono le statistiche di Raichu di Alola?",
 ];
 
 /** How many suggested questions to display on the welcome screen. */

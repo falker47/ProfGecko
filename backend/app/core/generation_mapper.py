@@ -88,6 +88,75 @@ VERSION_GROUP_TO_GEN: dict[str, int] = {
 }
 
 
+# Maps user-facing game titles to game_data.py slugs.
+# Longest match first avoids partial matches.
+GAME_TITLE_TO_SLUG: dict[str, str] = {
+    # Gen 1
+    "rosso": "red_blue", "blu": "red_blue", "giallo": "red_blue",
+    "red": "red_blue", "blue": "red_blue", "yellow": "red_blue",
+    # Gen 2
+    "oro": "gold_silver", "argento": "gold_silver", "cristallo": "gold_silver",
+    "gold": "gold_silver", "silver": "gold_silver", "crystal": "gold_silver",
+    # Gen 3
+    "smeraldo": "emerald", "emerald": "emerald",
+    "rubino": "emerald", "zaffiro": "emerald",
+    "ruby": "emerald", "sapphire": "emerald",
+    "rosso fuoco": "emerald", "rossofuoco": "emerald",
+    "verde foglia": "emerald", "verdefoglia": "emerald",
+    "firered": "emerald", "fire red": "emerald",
+    "leafgreen": "emerald", "leaf green": "emerald",
+    # Gen 4
+    "platino": "platinum", "platinum": "platinum",
+    "diamante": "platinum", "diamond": "platinum",
+    "perla": "platinum", "pearl": "platinum",
+    "heartgold": "platinum", "heart gold": "platinum",
+    "soulsilver": "platinum", "soul silver": "platinum",
+    # Gen 5
+    "nero": "black_white", "bianco": "black_white",
+    "nero 2": "black_white", "nero2": "black_white",
+    "bianco 2": "black_white", "bianco2": "black_white",
+    "black": "black_white", "white": "black_white",
+    "black 2": "black_white", "white 2": "black_white",
+    # Gen 6
+    "x": "x_y", "y": "x_y",
+    "rubino omega": "x_y", "zaffiro alpha": "x_y",
+    "omega ruby": "x_y", "alpha sapphire": "x_y",
+    # Gen 7
+    "sole": "sun_moon", "luna": "sun_moon",
+    "ultrasole": "sun_moon", "ultraluna": "sun_moon",
+    "sun": "sun_moon", "moon": "sun_moon",
+    "ultra sun": "sun_moon", "ultra moon": "sun_moon",
+    "let's go pikachu": "sun_moon", "let's go eevee": "sun_moon",
+    "lets go pikachu": "sun_moon", "lets go eevee": "sun_moon",
+    "let's go": "sun_moon",
+    # Gen 8
+    "spada": "sword_shield", "scudo": "sword_shield",
+    "sword": "sword_shield", "shield": "sword_shield",
+    "diamante lucente": "sword_shield", "perla splendente": "sword_shield",
+    "brilliant diamond": "sword_shield", "shining pearl": "sword_shield",
+    "leggende arceus": "sword_shield", "legends arceus": "sword_shield",
+    # Gen 9
+    "scarlatto": "scarlet_violet", "violetto": "scarlet_violet",
+    "scarlet": "scarlet_violet", "violet": "scarlet_violet",
+}
+
+
+def detect_game_slug(query: str) -> str | None:
+    """Detect the specific game slug from a user query.
+
+    Returns the game_data.py slug (e.g. "platinum") if a game title
+    is found, or None if only a generic generation reference is used.
+    """
+    query_lower = query.lower()
+
+    # Check game names (longest match first to avoid partial matches)
+    for title, slug in sorted(GAME_TITLE_TO_SLUG.items(), key=lambda x: -len(x[0])):
+        if title in query_lower:
+            return slug
+
+    return None
+
+
 def detect_generation(query: str) -> int | None:
     """Detect the target generation from a user query.
 

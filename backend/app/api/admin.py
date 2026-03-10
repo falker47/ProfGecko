@@ -22,6 +22,89 @@ class AddStopwordsBody(BaseModel):
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+@router.get("/vectorstore/stats")
+async def vectorstore_stats(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Return vectorstore statistics (document count).
+
+    Usage:
+        GET /api/admin/vectorstore/stats?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    vectorstore = getattr(request.app.state, "vectorstore", None)
+    if vectorstore is None:
+        raise HTTPException(status_code=503, detail="Vectorstore not initialized")
+
+    doc_count = vectorstore._collection.count()
+    return {"documents_count": doc_count}
+
+
+@router.post("/reload-vectorstore")
+async def reload_vectorstore(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Reload the in-memory vectorstore from disk without re-ingesting.
+
+    Use after running `run_ingestion.bat` (CLI ingestion) to pick up
+    the freshly indexed documents without restarting the backend.
+
+    Usage:
+        POST /api/admin/reload-vectorstore?secret=YOUR_JWT_SECRET
+    """
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    from app.config import get_settings
+    from app.core.embeddings import get_embeddings
+    from app.core.llm import get_llm
+    from app.core.rag_chain import RAGChain
+    from app.core.vectorstore import get_vectorstore
+
+    settings = get_settings()
+
+    embeddings = get_embeddings(
+        settings.embedding_provider, model=settings.embedding_model,
+    )
+    new_vs = get_vectorstore(
+        settings.chroma_persist_dir,
+        settings.chroma_collection_name,
+        embeddings,
+    )
+    doc_count = new_vs._collection.count()
+
+    # Rebuild LLM + RAG chain with the fresh vectorstore
+    llm = get_llm(
+        settings.llm_provider,
+        model=settings.llm_model,
+        temperature=settings.llm_temperature,
+    )
+    fallback_llm = None
+    if settings.llm_fallback_model and settings.llm_fallback_model != settings.llm_model:
+        fallback_llm = get_llm(
+            settings.llm_provider,
+            model=settings.llm_fallback_model,
+            temperature=settings.llm_temperature,
+        )
+
+    request.app.state.vectorstore = new_vs
+    request.app.state.rag_chain = RAGChain(
+        llm=llm,
+        vectorstore=new_vs,
+        k=settings.retriever_k,
+        fallback_llm=fallback_llm,
+    )
+
+    return {
+        "status": "ok",
+        "documents_loaded": doc_count,
+    }
+
+
 @router.post("/ingest")
 async def trigger_ingestion(
     request: Request,

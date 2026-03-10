@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getStats } from "@/lib/admin-api";
+import { getStats, getVectorstoreStats } from "@/lib/admin-api";
 import type { CacheStats } from "@/lib/admin-types";
 import StatsCards from "./StatsCards";
 import AdminActions from "./AdminActions";
@@ -20,12 +20,17 @@ export default function AdminDashboard({
   onAuthFailed,
 }: AdminDashboardProps) {
   const [stats, setStats] = useState<CacheStats | null>(null);
+  const [vectorstoreCount, setVectorstoreCount] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const fetchStats = useCallback(async () => {
     try {
-      const data = await getStats(secret);
-      setStats(data);
+      const [cacheData, vsData] = await Promise.all([
+        getStats(secret),
+        getVectorstoreStats(secret).catch(() => null),
+      ]);
+      setStats(cacheData);
+      if (vsData) setVectorstoreCount(vsData.documents_count);
     } catch (err) {
       if (err instanceof Error && err.message === "AUTH_FAILED") {
         onAuthFailed();
@@ -69,7 +74,7 @@ export default function AdminDashboard({
 
       {/* Content */}
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        <StatsCards stats={stats} />
+        <StatsCards stats={stats} vectorstoreCount={vectorstoreCount} />
         <AdminActions
           secret={secret}
           onAction={handleRefresh}

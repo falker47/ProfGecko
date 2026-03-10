@@ -2029,9 +2029,56 @@ Descrizione: {flavor}"""
 # --- Item Documents ---
 
 
+def _build_reverse_item_usage(
+    generation: int,
+    species_data: dict[int, dict],
+) -> dict[str, list[str]]:
+    """Build reverse mapping: item_slug → sorted list of Pokemon IT names.
+
+    Uses Smogon competitive sets across all tiers to determine which
+    Pokemon competitively use which items.  Item slugs use PokeAPI format
+    (lowercase, hyphens) to match ``item["name"]`` in ``items_data``.
+    """
+    import re
+    from app.ingestion.smogon_transformer import _to_slug
+
+    # Build species display name (EN) → Italian name lookup
+    sp_en_to_it: dict[str, str] = {}
+    for sp in species_data.values():
+        en_name = ""
+        for entry in sp.get("names", []):
+            if entry.get("language", {}).get("name") == "en":
+                en_name = entry.get("name", "")
+                break
+        it_name = _get_localized(sp.get("names", []), "it")
+        if en_name and it_name:
+            sp_en_to_it[en_name.lower()] = it_name
+
+    mapping: dict[str, set[str]] = {}
+
+    _TIERS = ["ou", "uu", "ubers", "ru", "nu"]
+    for tier in _TIERS:
+        try:
+            sets = fetch_smogon_sets(generation, tier)
+        except Exception:
+            continue
+        for pokemon_en, pokemon_sets in sets.items():
+            pokemon_it = sp_en_to_it.get(pokemon_en.lower(), pokemon_en)
+            for set_data in pokemon_sets.values():
+                items_raw = set_data.get("item", [])
+                if isinstance(items_raw, str):
+                    items_raw = [items_raw]
+                for item_name in items_raw:
+                    item_slug = _to_slug(item_name)
+                    mapping.setdefault(item_slug, set()).add(pokemon_it)
+
+    return {slug: sorted(names) for slug, names in mapping.items()}
+
+
 def build_item_documents(
     items_data: dict[int, dict],
     generation: int,
+    reverse_item_usage: dict[str, list[str]] | None = None,
 ) -> list[Document]:
     """Build one Document per item for the given generation.
 
@@ -2071,6 +2118,25 @@ Nome inglese: {name_en}
 Categoria: {category}
 Effetto: {effect}
 Descrizione: {flavor}"""
+
+        # Reverse item usage: which Pokemon use this item competitively
+        if reverse_item_usage:
+            item_slug = item["name"]  # PokeAPI slug, e.g. "life-orb"
+            users = reverse_item_usage.get(item_slug, [])
+            if users:
+                count = len(users)
+                _MAX_LISTED = 30
+                if count <= _MAX_LISTED:
+                    user_str = ", ".join(users)
+                else:
+                    user_str = (
+                        ", ".join(users[:_MAX_LISTED])
+                        + f" e altri {count - _MAX_LISTED}"
+                    )
+                page_content += (
+                    f"\nPokemon che usano questo strumento"
+                    f" in competitivo ({count}): {user_str}"
+                )
 
         metadata = {
             "entity_type": "item",
@@ -2845,9 +2911,13 @@ def build_all_documents_for_generation(
 
     # Items only for the latest gen (no historical tracking available)
     if generation == max(MAX_POKEMON_PER_GEN.keys()):
+        reverse_item_usage = _build_reverse_item_usage(
+            generation, all_data["species"],
+        )
         docs.extend(build_item_documents(
             all_data["items"],
             generation,
+            reverse_item_usage=reverse_item_usage,
         ))
 
     docs.extend(build_nature_documents(

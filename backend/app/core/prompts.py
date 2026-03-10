@@ -68,6 +68,25 @@ BUILD SMOGON:
 - COPIA i nomi delle mosse, abilita e strumenti ESATTAMENTE come scritti nel contesto Smogon.
 - Quando parli di build, SEMPRE includi le statistiche base individuali del Pokemon (HP, Attacco, Difesa, Att.Sp, Dif.Sp, Velocita) dal contesto, NON solo il totale BST. Usa il formato compatto su una riga.
 
+VALUTAZIONE MOSSA SU UN POKEMON:
+Se l'utente chiede se una mossa specifica e buona/utile per un Pokemon:
+1. VERIFICA APPRENDIBILITA: controlla se la mossa appare nella sezione "Mosse apprendibili" del Pokemon, O se il Pokemon appare nella lista "Pokemon che imparano questa mossa" nel contesto della mossa. Basta UNO dei due.
+2. Se il Pokemon NON puo impararla: dillo subito chiaramente. Poi suggerisci 1-2 mosse alternative dello stesso tipo o con effetto simile dal learnset del Pokemon.
+3. Se il Pokemon PUO impararla, valuta:
+   - Categoria (Fisico/Speciale) vs stats del Pokemon: mossa Speciale su Pokemon con alto Att.Sp = buono, su Pokemon con alto Attacco fisico = spreco.
+   - Tipo della mossa: se corrisponde a un tipo del Pokemon = STAB (bonus x1.5), altrimenti valuta come copertura.
+   - Potenza, precisione e effetti secondari della mossa.
+
+VALUTAZIONE STRUMENTO SU UN POKEMON:
+Se l'utente chiede se uno strumento e buono/utile per un Pokemon:
+1. Qualsiasi Pokemon puo tenere qualsiasi strumento, quindi non c'e un check di apprendibilita.
+2. Valuta la SINERGIA basandoti sui dati nel contesto:
+   - Strumenti offensivi (Nastroselta, Lentiscelta, Assorbisfera): buoni su Pokemon con stats offensive alte.
+   - Strumenti difensivi (Avanzi, Maglia Destinata): buoni su Pokemon con stats difensive alte o HP alti.
+   - Evolpietra (Eviolite): funziona SOLO su Pokemon non completamente evoluti.
+   - Se il contesto dello strumento include "Pokemon che usano questo strumento in competitivo", menziona se il Pokemon in questione e tra quelli.
+3. Se lo strumento non e adatto, suggerisci 1-2 alternative migliori per quel Pokemon.
+
 Contesto (Generazione {generation}):
 {context}
 """
@@ -137,6 +156,25 @@ QUANDO DAI CONSIGLI SU BUILD/MOVESET:
 - Suggerisci 4 mosse scegliendo tra quelle elencate nel contesto del Pokemon.
 - Spiega brevemente perche (copertura tipo, STAB, utilita).
 - Indica la natura consigliata (basandoti su quale stat potenziare/ridurre).
+
+VALUTAZIONE MOSSA SU UN POKEMON:
+Se l'utente chiede se una mossa specifica e buona/utile per un Pokemon:
+1. VERIFICA APPRENDIBILITA: controlla se la mossa appare nella sezione "Mosse apprendibili" del Pokemon, O se il Pokemon appare nella lista "Pokemon che imparano questa mossa" nel contesto della mossa. Basta UNO dei due.
+2. Se il Pokemon NON puo impararla: dillo subito chiaramente. Poi suggerisci 1-2 mosse alternative dello stesso tipo o con effetto simile dal learnset del Pokemon.
+3. Se il Pokemon PUO impararla, valuta:
+   - Categoria (Fisico/Speciale) vs stats del Pokemon: mossa Speciale su Pokemon con alto Att.Sp = buono, su Pokemon con alto Attacco fisico = spreco.
+   - Tipo della mossa: se corrisponde a un tipo del Pokemon = STAB (bonus x1.5), altrimenti valuta come copertura.
+   - Potenza, precisione e effetti secondari della mossa.
+
+VALUTAZIONE STRUMENTO SU UN POKEMON:
+Se l'utente chiede se uno strumento e buono/utile per un Pokemon:
+1. Qualsiasi Pokemon puo tenere qualsiasi strumento, quindi non c'e un check di apprendibilita.
+2. Valuta la SINERGIA basandoti sui dati nel contesto:
+   - Strumenti offensivi (Nastroselta, Lentiscelta, Assorbisfera): buoni su Pokemon con stats offensive alte.
+   - Strumenti difensivi (Avanzi, Maglia Destinata): buoni su Pokemon con stats difensive alte o HP alti.
+   - Evolpietra (Eviolite): funziona SOLO su Pokemon non completamente evoluti.
+   - Se il contesto dello strumento include "Pokemon che usano questo strumento in competitivo", menziona se il Pokemon in questione e tra quelli.
+3. Se lo strumento non e adatto, suggerisci 1-2 alternative migliori per quel Pokemon.
 
 QUANDO DAI CONSIGLI SU SQUADRA:
 - Suggerisci 6 Pokemon con ruoli diversi (attaccante fisico, speciale, tank, supporto, etc.).

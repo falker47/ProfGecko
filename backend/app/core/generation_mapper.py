@@ -50,6 +50,16 @@ GAME_TO_GENERATION: dict[str, int] = {
     # Gen 9
     "scarlatto": 9, "violetto": 9,
     "scarlet": 9, "violet": 9,
+    # Abbreviazioni Smogon / community
+    "rb": 1, "rby": 1,
+    "gs": 2, "gsc": 2,
+    "rs": 3, "rse": 3, "frlg": 3,
+    "dp": 4, "dpp": 4, "dppt": 4, "hgss": 4,
+    "bw": 5, "bw2": 5,
+    "xy": 6, "oras": 6,
+    "sm": 7, "usum": 7, "lgpe": 7,
+    "ss": 8, "swsh": 8, "bdsp": 8, "pla": 8,
+    "sv": 9,
 }
 
 # Explicit gen references (formali + abbreviazioni informali)
@@ -151,6 +161,16 @@ GAME_TITLE_TO_SLUG: dict[str, str] = {
     # Gen 9
     "scarlatto": "scarlet_violet", "violetto": "scarlet_violet",
     "scarlet": "scarlet_violet", "violet": "scarlet_violet",
+    # Abbreviazioni Smogon / community
+    "rb": "red_blue", "rby": "red_blue",
+    "gs": "gold_silver", "gsc": "gold_silver",
+    "rs": "emerald", "rse": "emerald", "frlg": "emerald",
+    "dp": "platinum", "dpp": "platinum", "dppt": "platinum", "hgss": "platinum",
+    "bw": "black_white", "bw2": "black_white",
+    "xy": "x_y", "oras": "x_y",
+    "sm": "sun_moon", "usum": "sun_moon", "lgpe": "sun_moon",
+    "ss": "sword_shield", "swsh": "sword_shield", "bdsp": "sword_shield", "pla": "sword_shield",
+    "sv": "scarlet_violet",
 }
 
 

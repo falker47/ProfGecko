@@ -2314,6 +2314,48 @@ def build_game_data_documents(generation: int) -> list[Document]:
                 },
             ))
 
+        # --- Best starter document ---
+        best_starter = data.get("best_starter")
+        if best_starter:
+            starter_names = ", ".join(s["name"] for s in data.get("starters", []))
+            text = (
+                f"Miglior starter in {game_it} "
+                f"(Generazione {generation}, regione {region}):\n"
+                f"Gli starter disponibili sono: {starter_names}.\n\n"
+                f"{best_starter}"
+            )
+            docs.append(Document(
+                page_content=text,
+                metadata={
+                    "entity_type": "game_info",
+                    "info_category": "best_starter",
+                    "generation": generation,
+                    "game_slug": slug,
+                    "game_it": game_it,
+                    "region": region,
+                },
+            ))
+
+        # --- Best team document ---
+        best_team = data.get("best_team")
+        if best_team:
+            text = (
+                f"Miglior squadra consigliata per {game_it} "
+                f"(Generazione {generation}, regione {region}):\n\n"
+                f"{best_team}"
+            )
+            docs.append(Document(
+                page_content=text,
+                metadata={
+                    "entity_type": "game_info",
+                    "info_category": "best_team",
+                    "generation": generation,
+                    "game_slug": slug,
+                    "game_it": game_it,
+                    "region": region,
+                },
+            ))
+
     return docs
 
 

@@ -66,6 +66,7 @@ BUILD SMOGON:
 - Le opzioni separate da "/" sono alternative equivalenti tra cui l'utente puo scegliere.
 - Se il Pokemon ha piu set, spiega brevemente quando usare ciascuno.
 - COPIA i nomi delle mosse, abilita e strumenti ESATTAMENTE come scritti nel contesto Smogon.
+- Quando parli di build, SEMPRE includi le statistiche base individuali del Pokemon (HP, Attacco, Difesa, Att.Sp, Dif.Sp, Velocita) dal contesto, NON solo il totale BST. Usa il formato compatto su una riga.
 
 Contesto (Generazione {generation}):
 {context}
@@ -131,9 +132,10 @@ BUILD SMOGON:
 
 QUANDO DAI CONSIGLI SU BUILD/MOVESET:
 - Se il contesto include set Smogon, usali come base principale per i consigli.
+- SEMPRE includi le statistiche base individuali del Pokemon (HP, Attacco, Difesa, Att.Sp, Dif.Sp, Velocita) dal contesto, NON solo il totale BST. Usa il formato compatto su una riga.
+- Usa le stats per giustificare le scelte: alto Attacco = attaccante fisico, alta Velocita = natura che potenzia Velocita, ecc.
 - Suggerisci 4 mosse scegliendo tra quelle elencate nel contesto del Pokemon.
 - Spiega brevemente perche (copertura tipo, STAB, utilita).
-- Per l'attaccante fisico/speciale, guarda le stat Attacco vs Att.Sp nel contesto.
 - Indica la natura consigliata (basandoti su quale stat potenziare/ridurre).
 
 QUANDO DAI CONSIGLI SU SQUADRA:

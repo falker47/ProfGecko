@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import Image from "next/image";
 import Markdown from "react-markdown";
 import type { Message } from "@/lib/types";
 
@@ -9,23 +10,32 @@ interface MessageBubbleProps {
 
 export default function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
   const isUser = message.role === "user";
+
+  // Hide empty assistant placeholder — the TypingIndicator handles this state
+  if (!isUser && !message.content) return null;
+
   const showFeedback =
     !isUser && message.id !== "welcome" && message.entryId != null && message.content;
 
   return (
-    <div>
+    <div className="animate-[slide-up_0.3s_ease-out]">
       <div
         className={clsx("flex gap-2", isUser ? "flex-row-reverse" : "flex-row")}
       >
         {/* Avatar */}
-        <div
-          className={clsx(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm",
-            isUser ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-700",
-          )}
-        >
-          {isUser ? "Tu" : "PG"}
-        </div>
+        {isUser ? (
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm text-white">
+            Tu
+          </div>
+        ) : (
+          <Image
+            src="/profgallade-avatar.jpg"
+            alt="Prof. Gallade"
+            width={32}
+            height={32}
+            className="h-8 w-8 shrink-0 rounded-full"
+          />
+        )}
 
         {/* Bubble */}
         <div

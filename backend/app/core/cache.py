@@ -418,29 +418,39 @@ class ResponseCache:
         Returns (response_text, entry_id) on hit, or None on miss.
         Tries exact hash first, then normalized hash. On hit, updates
         hit_count and last_hit_at for LRU tracking.
+
+        Skips entries with feedback='M' (auto-detected "missing info"
+        responses) so they get re-generated with the current prompt.
+        Only reviewed entries ('Y') and unreviewed ('-') are served.
         """
         exact = _exact_hash(question)
         normal = _normal_hash(question)
 
         # Level 1: exact match
         row = await self._fetchone(
-            "SELECT id, response FROM response_cache WHERE exact_hash = ? AND generation = ?",
+            "SELECT id, response, feedback FROM response_cache WHERE exact_hash = ? AND generation = ?",
             (exact, generation),
         )
         if row:
-            await self._record_hit(row["id"])
-            logger.info("Cache HIT (exact) for %r gen=%d", question[:60], generation)
-            return (row["response"], row["id"])
+            if row["feedback"] == "M":
+                logger.info("Cache SKIP (exact, feedback=M) for %r gen=%d", question[:60], generation)
+            else:
+                await self._record_hit(row["id"])
+                logger.info("Cache HIT (exact) for %r gen=%d", question[:60], generation)
+                return (row["response"], row["id"])
 
         # Level 2: normalized match
         row = await self._fetchone(
-            "SELECT id, response FROM response_cache WHERE normal_hash = ? AND generation = ?",
+            "SELECT id, response, feedback FROM response_cache WHERE normal_hash = ? AND generation = ?",
             (normal, generation),
         )
         if row:
-            await self._record_hit(row["id"])
-            logger.info("Cache HIT (normalized) for %r gen=%d", question[:60], generation)
-            return (row["response"], row["id"])
+            if row["feedback"] == "M":
+                logger.info("Cache SKIP (normalized, feedback=M) for %r gen=%d", question[:60], generation)
+            else:
+                await self._record_hit(row["id"])
+                logger.info("Cache HIT (normalized) for %r gen=%d", question[:60], generation)
+                return (row["response"], row["id"])
 
         logger.info("Cache MISS for %r gen=%d", question[:60], generation)
         return None
@@ -456,12 +466,27 @@ class ResponseCache:
         exact = _exact_hash(question)
         normal = _normal_hash(question)
 
-        # Don't store duplicates (same exact_hash + generation)
+        # Don't store duplicates (same exact_hash + generation).
+        # Exception: if the existing entry is feedback='M' (auto-detected
+        # missing) and the new response is NOT missing, replace it — the
+        # improved prompt may have resolved the issue.
         existing = await self._fetchone(
-            "SELECT id FROM response_cache WHERE exact_hash = ? AND generation = ?",
+            "SELECT id, feedback FROM response_cache WHERE exact_hash = ? AND generation = ?",
             (exact, generation),
         )
         if existing:
+            if existing["feedback"] == "M" and feedback != "M":
+                # Replace stale "missing info" entry with new good response
+                await self._db.execute(
+                    """UPDATE response_cache
+                       SET response = ?, feedback = ?, normal_hash = ?,
+                           hit_count = 0, last_hit_at = NULL
+                       WHERE id = ?""",
+                    (response, feedback, normal, existing["id"]),
+                )
+                await self._db.commit()
+                logger.info("Cache REPLACE (M→%s) for %r gen=%d", feedback, question[:60], generation)
+                return existing["id"]
             return existing["id"]
 
         cursor = await self._db.execute(

@@ -34,11 +34,11 @@ GAME_STATIC_DATA: dict[str, dict] = {
     # ═══════════════════════════════════════════════════════════════
 
     "red_blue": {
-        "game_it": "Pokemon Rosso e Blu",
-        "game_en": "Pokemon Red & Blue",
+        "game_it": "Pokemon Rosso, Blu e Giallo",
+        "game_en": "Pokemon Red, Blue & Yellow",
         "generation": 1,
         "region_it": "Kanto",
-        "versions": ["Rosso", "Blu"],
+        "versions": ["Rosso", "Blu", "Giallo"],
         "starters": [
             {"name": "Bulbasaur", "type_it": f"{_t('Grass')}/{_t('Poison')}"},
             {"name": "Charmander", "type_it": _t("Fire")},
@@ -73,11 +73,11 @@ GAME_STATIC_DATA: dict[str, dict] = {
     # ═══════════════════════════════════════════════════════════════
 
     "gold_silver": {
-        "game_it": "Pokemon Oro e Argento",
-        "game_en": "Pokemon Gold & Silver",
+        "game_it": "Pokemon Oro, Argento e Cristallo",
+        "game_en": "Pokemon Gold, Silver & Crystal",
         "generation": 2,
         "region_it": "Johto",
-        "versions": ["Oro", "Argento"],
+        "versions": ["Oro", "Argento", "Cristallo"],
         "starters": [
             {"name": "Chikorita", "type_it": _t("Grass")},
             {"name": "Cyndaquil", "type_it": _t("Fire")},
@@ -116,8 +116,8 @@ GAME_STATIC_DATA: dict[str, dict] = {
     # ═══════════════════════════════════════════════════════════════
 
     "emerald": {
-        "game_it": "Pokemon Smeraldo",
-        "game_en": "Pokemon Emerald",
+        "game_it": "Pokemon Rubino, Zaffiro e Smeraldo",
+        "game_en": "Pokemon Ruby, Sapphire & Emerald",
         "generation": 3,
         "region_it": "Hoenn",
         "versions": ["Rubino", "Zaffiro", "Smeraldo"],
@@ -165,8 +165,8 @@ GAME_STATIC_DATA: dict[str, dict] = {
     # ═══════════════════════════════════════════════════════════════
 
     "platinum": {
-        "game_it": "Pokemon Platino",
-        "game_en": "Pokemon Platinum",
+        "game_it": "Pokemon Diamante, Perla e Platino",
+        "game_en": "Pokemon Diamond, Pearl & Platinum",
         "generation": 4,
         "region_it": "Sinnoh",
         "versions": ["Diamante", "Perla", "Platino"],

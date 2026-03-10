@@ -1,3 +1,16 @@
+import re
+
+
+def _word_in(keyword: str, text: str) -> bool:
+    """Check if *keyword* appears as a whole word (or phrase) in *text*.
+
+    Uses ``\\b`` word boundaries so that short game names like ``"x"``
+    or ``"oro"`` don't accidentally match inside longer words
+    (e.g. ``"extrarapido"``, ``"corrosione"``).
+    """
+    return bool(re.search(r"\b" + re.escape(keyword) + r"\b", text))
+
+
 GAME_TO_GENERATION: dict[str, int] = {
     # Gen 1
     "rosso": 1, "blu": 1, "giallo": 1,
@@ -146,12 +159,14 @@ def detect_game_slug(query: str) -> str | None:
 
     Returns the game_data.py slug (e.g. "platinum") if a game title
     is found, or None if only a generic generation reference is used.
+    Uses word-boundary matching to avoid false positives like
+    "x" matching inside "extrarapido".
     """
     query_lower = query.lower()
 
     # Check game names (longest match first to avoid partial matches)
     for title, slug in sorted(GAME_TITLE_TO_SLUG.items(), key=lambda x: -len(x[0])):
-        if title in query_lower:
+        if _word_in(title, query_lower):
             return slug
 
     return None
@@ -162,17 +177,19 @@ def detect_generation(query: str) -> int | None:
 
     Returns the generation number if found, or None to use the latest.
     Checks explicit gen references first, then game names.
+    Uses word-boundary matching to avoid false positives like
+    "x" matching inside "extrarapido".
     """
     query_lower = query.lower()
 
     # Check explicit gen references first (most specific)
     for keyword, gen in sorted(GEN_KEYWORDS.items(), key=lambda x: -len(x[0])):
-        if keyword in query_lower:
+        if _word_in(keyword, query_lower):
             return gen
 
     # Check game names (longest match first to avoid partial matches)
     for game, gen in sorted(GAME_TO_GENERATION.items(), key=lambda x: -len(x[0])):
-        if game in query_lower:
+        if _word_in(game, query_lower):
             return gen
 
     return None

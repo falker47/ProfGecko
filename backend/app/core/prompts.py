@@ -46,6 +46,20 @@ ABILITA E MOSSE:
 - I NOMI delle abilita e delle mosse nel contesto sono gia tradotti correttamente in italiano. COPIA i nomi ESATTAMENTE come scritti nel contesto, senza tradurli o modificarli.
 - Se un'abilita nel contesto si chiama "Cartavetro", usa "Cartavetro". NON inventare traduzioni alternative.
 
+DATI BIOLOGICI E DI CATTURA:
+- Il contesto di un Pokemon puo includere questi campi: Gruppo uova, Tasso di crescita, Tasso di cattura, Felicita base, Passi per schiudersi.
+- "Tasso di crescita" = velocita di crescita, growth rate, curva di esperienza, livellamento.
+- "Tasso di cattura" = catturabilita, catch rate. E un numero: piu alto = piu facile.
+- "Passi per schiudersi" = passi uovo, hatch steps, cicli uova.
+- "Gruppo uova" = egg group, gruppo breeding.
+- Se l'utente chiede queste informazioni, cerca il CAMPO ESATTO nel contesto del Pokemon e riportalo.
+
+DETTAGLI MOSSE:
+- Il contesto di una mossa include: Tipo, Categoria, Potenza, Precisione, PP, Bersaglio, Effetto.
+- Il campo "Priorita" appare nel contesto SOLO per mosse con priorita diversa da 0 (es. "Priorita: +1").
+- Se "Priorita" NON appare nel contesto della mossa, la priorita e 0 (normale).
+- Possono apparire anche: stato inflitto, tentennamento, assorbimento, contraccolpo, cura, tasso critico, modifica statistiche.
+
 Contesto (Generazione {generation}):
 {context}
 """
@@ -86,6 +100,20 @@ DEBOLEZZE / RESISTENZE / IMMUNITA:
 - Ogni Pokemon ha una sezione "Efficacia tipi (difesa)" GIA CALCOLATA nel contesto.
 - COPIA quei dati esattamente. NON ricalcolarli, NON modificarli, NON invertirli.
 - Se il contesto dice "Ghiaccio x4" rispondi "debole x4 a Ghiaccio", MAI invertire i numeri tra tipi.
+
+DATI BIOLOGICI E DI CATTURA:
+- Il contesto di un Pokemon puo includere questi campi: Gruppo uova, Tasso di crescita, Tasso di cattura, Felicita base, Passi per schiudersi.
+- "Tasso di crescita" = velocita di crescita, growth rate, curva di esperienza, livellamento.
+- "Tasso di cattura" = catturabilita, catch rate. E un numero: piu alto = piu facile.
+- "Passi per schiudersi" = passi uovo, hatch steps, cicli uova.
+- "Gruppo uova" = egg group, gruppo breeding.
+- Se l'utente chiede queste informazioni, cerca il CAMPO ESATTO nel contesto del Pokemon e riportalo.
+
+DETTAGLI MOSSE:
+- Il contesto di una mossa include: Tipo, Categoria, Potenza, Precisione, PP, Bersaglio, Effetto.
+- Il campo "Priorita" appare nel contesto SOLO per mosse con priorita diversa da 0 (es. "Priorita: +1").
+- Se "Priorita" NON appare nel contesto della mossa, la priorita e 0 (normale).
+- Possono apparire anche: stato inflitto, tentennamento, assorbimento, contraccolpo, cura, tasso critico, modifica statistiche.
 
 QUANDO DAI CONSIGLI SU BUILD/MOVESET:
 - Suggerisci 4 mosse scegliendo tra quelle elencate nel contesto del Pokemon.

@@ -161,6 +161,9 @@ def detect_game_slug(query: str) -> str | None:
     is found, or None if only a generic generation reference is used.
     Uses word-boundary matching to avoid false positives like
     "x" matching inside "extrarapido".
+
+    For multi-word game titles, also checks if all individual words
+    appear in the query even when not adjacent.
     """
     query_lower = query.lower()
 
@@ -168,6 +171,10 @@ def detect_game_slug(query: str) -> str | None:
     for title, slug in sorted(GAME_TITLE_TO_SLUG.items(), key=lambda x: -len(x[0])):
         if _word_in(title, query_lower):
             return slug
+        if " " in title:
+            words = title.split()
+            if all(_word_in(w, query_lower) for w in words):
+                return slug
 
     return None
 
@@ -179,6 +186,12 @@ def detect_generation(query: str) -> int | None:
     Checks explicit gen references first, then game names.
     Uses word-boundary matching to avoid false positives like
     "x" matching inside "extrarapido".
+
+    For multi-word game names (e.g. "rosso fuoco"), also checks if all
+    individual words appear in the query even when not adjacent
+    (e.g. "pokemon rosso/fuoco" or "rosso, fuoco"). This prevents
+    single-word partial matches like "rosso" -> gen 1 when the user
+    meant "rosso fuoco" -> gen 3.
     """
     query_lower = query.lower()
 
@@ -187,9 +200,15 @@ def detect_generation(query: str) -> int | None:
         if _word_in(keyword, query_lower):
             return gen
 
-    # Check game names (longest match first to avoid partial matches)
+    # Check game names (longest match first to avoid partial matches).
+    # For multi-word names, also accept all words present individually.
     for game, gen in sorted(GAME_TO_GENERATION.items(), key=lambda x: -len(x[0])):
         if _word_in(game, query_lower):
             return gen
+        # Fallback for multi-word games: match if all words appear
+        if " " in game:
+            words = game.split()
+            if all(_word_in(w, query_lower) for w in words):
+                return gen
 
     return None

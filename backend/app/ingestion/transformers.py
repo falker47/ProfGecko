@@ -2778,22 +2778,24 @@ def build_all_documents_for_generation(
             generation,
         ))
 
-    # Smogon competitive sets (OU tier)
-    try:
-        smogon_sets = fetch_smogon_sets(generation, "ou")
-        if smogon_sets:
-            smogon_docs = build_smogon_documents(
-                smogon_sets, all_data, generation, tier="ou",
+    # Smogon competitive sets (multiple tiers)
+    _SMOGON_TIERS = ["ou", "uu", "ubers", "ru", "nu"]
+    for tier in _SMOGON_TIERS:
+        try:
+            smogon_sets = fetch_smogon_sets(generation, tier)
+            if smogon_sets:
+                smogon_docs = build_smogon_documents(
+                    smogon_sets, all_data, generation, tier=tier,
+                )
+                docs.extend(smogon_docs)
+                logger.info(
+                    "Gen %d: %d Smogon %s documents built",
+                    generation, len(smogon_docs), tier.upper(),
+                )
+        except Exception as exc:
+            logger.warning(
+                "Gen %d: Smogon %s fetch/build failed, skipping: %s",
+                generation, tier.upper(), exc,
             )
-            docs.extend(smogon_docs)
-            logger.info(
-                "Gen %d: %d Smogon OU documents built",
-                generation, len(smogon_docs),
-            )
-    except Exception as exc:
-        logger.warning(
-            "Gen %d: Smogon fetch/build failed, skipping: %s",
-            generation, exc,
-        )
 
     return docs

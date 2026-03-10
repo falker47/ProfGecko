@@ -54,7 +54,9 @@ _SMOGON_KEYWORDS = frozenset({
     "smogon", "set competitivo", "set competitivi",
     "build competitiva", "build competitive",
     "ev spread", "moveset smogon", "set smogon",
-    "build smogon", "tier ou",
+    "build smogon",
+    "tier ou", "tier uu", "tier ubers", "tier ru", "tier nu",
+    "overused", "underused", "neverused", "rarelyused",
 })
 
 # Stop words italiane da ignorare nell'estrazione nomi entita.

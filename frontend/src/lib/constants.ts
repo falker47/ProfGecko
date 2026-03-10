@@ -24,10 +24,10 @@ export const SUGGESTED_QUESTIONS: string[] = [
   "Quali sono le debolezze del tipo Drago?",
   "Che tipi sono superefficaci contro Acciaio?",
   "Quali Pokemon di tipo Spettro resistono al tipo Buio?",
-  // Starter e consigli
-  "Qual è il miglior starter di Pokemon Smeraldo?",
-  "Consigliami un team per Pokemon Platino",
-  "Quale starter scegliere in Pokemon Rosso Fuoco?",
+  // Pokemon e statistiche
+  "Quali sono le statistiche di Charizard?",
+  "Che abilità ha Garchomp?",
+  "Quali Pokemon di tipo Acqua hanno più Difesa Speciale?",
   // Mosse e strategie
   "Che mosse impara Garchomp per livello?",
   "Quali sono le mosse più forti di tipo Fuoco?",
@@ -41,9 +41,9 @@ export const SUGGESTED_QUESTIONS: string[] = [
   "Quanti Pokemon leggendari esistono nella terza generazione?",
   "Quali Pokemon hanno la statistica Attacco più alta?",
   // Generazioni specifiche
-  "Che Pokemon esclusivi ci sono in Pokemon Spada?",
   "Quali sono i capipalestra di Pokemon Oro?",
-  "Dove trovo Larvitar in Pokemon Argento?",
+  "Che mosse impara Pikachu in Pokemon Rosso?",
+  "Quali Pokemon leggendari ci sono in terza generazione?",
 ];
 
 /** How many suggested questions to display on the welcome screen. */

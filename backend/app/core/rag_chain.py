@@ -708,6 +708,7 @@ class RAGChain:
         """
         self._last_cache_hit = False
         self._last_entry_id: int | None = None
+        self._last_was_missing = False
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
 
@@ -742,6 +743,8 @@ class RAGChain:
         response_text = "".join(full_response)
         if cache and is_cacheable and response_text.strip():
             # Auto-detect "missing info" responses → feedback='M'
-            feedback = "M" if _MISSING_PHRASE in response_text.lower() else "-"
+            is_missing = _MISSING_PHRASE in response_text.lower()
+            feedback = "M" if is_missing else "-"
+            self._last_was_missing = is_missing
             entry_id = await cache.put(question, generation, response_text, feedback=feedback)
             self._last_entry_id = entry_id

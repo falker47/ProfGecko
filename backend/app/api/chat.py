@@ -52,8 +52,9 @@ async def chat_stream(
 ):
     """SSE streaming: sends tokens as they are generated.
 
-    Cache-hit responses are free (no credit deduction).
-    On cache hit, the credit that was pre-deducted is refunded.
+    Credits are pre-deducted, then refunded in two cases:
+    - Cache hit: already answered, no LLM cost incurred.
+    - Missing info: the LLM couldn't answer from the available context.
     """
     rag_chain: RAGChain = request.app.state.rag_chain
     cache: ResponseCache | None = getattr(request.app.state, "cache", None)
@@ -91,11 +92,15 @@ async def chat_stream(
             }
             return
 
-        # If cache hit, refund the credit that was pre-deducted
+        # Refund the pre-deducted credit when:
+        # - cache hit (already answered, no LLM cost)
+        # - missing info response (LLM couldn't answer from context)
         was_cache_hit = getattr(rag_chain, "_last_cache_hit", False)
+        was_missing = getattr(rag_chain, "_last_was_missing", False)
         entry_id = getattr(rag_chain, "_last_entry_id", None)
         final_credits = credit_info
-        if was_cache_hit and credit_info and user and request.app.state.db:
+        should_refund = was_cache_hit or was_missing
+        if should_refund and credit_info and user and request.app.state.db:
             from app.config import get_settings
             settings = get_settings()
             db = request.app.state.db

@@ -272,6 +272,35 @@ export async function reloadVectorstore(
   return res.json();
 }
 
+// ── Ingestion ────────────────────────────────────────────────────
+
+export async function startIngestion(
+  secret: string,
+  force: boolean = false,
+): Promise<{ status: string; message?: string }> {
+  const res = await adminFetch(secret, "/api/admin/ingest", {
+    method: "POST",
+    params: { force: String(force) },
+  });
+  return res.json();
+}
+
+export interface IngestionStatus {
+  status: "idle" | "running" | "completed" | "error";
+  started_at?: number | null;
+  elapsed_seconds?: number;
+  documents_indexed?: number;
+  message?: string;
+  error?: string;
+}
+
+export async function getIngestionStatus(
+  secret: string,
+): Promise<IngestionStatus> {
+  const res = await adminFetch(secret, "/api/admin/ingest/status");
+  return res.json();
+}
+
 // ── Export URL (no fetch, just builds the URL) ────────────────────
 
 export function getExportUrl(secret: string): string {

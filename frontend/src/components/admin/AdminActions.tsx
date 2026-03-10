@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { invalidateCache, cleanupCache, rehashCache, getExportUrl, importCsv, reloadVectorstore } from "@/lib/admin-api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { invalidateCache, cleanupCache, rehashCache, getExportUrl, importCsv, reloadVectorstore, startIngestion, getIngestionStatus } from "@/lib/admin-api";
+import type { IngestionStatus } from "@/lib/admin-api";
 
 interface AdminActionsProps {
   secret: string;
@@ -17,12 +18,79 @@ export default function AdminActions({
   const [message, setMessage] = useState("");
   const [importing, setImporting] = useState(false);
   const [reloading, setReloading] = useState(false);
+  const [ingesting, setIngesting] = useState(false);
+  const [ingestProgress, setIngestProgress] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function showMessage(text: string, duration = 5000) {
     setMessage(text);
     setTimeout(() => setMessage(""), duration);
   }
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  // Check if ingestion is already running on mount
+  useEffect(() => {
+    async function checkRunning() {
+      try {
+        const status = await getIngestionStatus(secret);
+        if (status.status === "running") {
+          setIngesting(true);
+          setIngestProgress(
+            `In corso... ${Math.round(status.elapsed_seconds ?? 0)}s`,
+          );
+          startPolling();
+        }
+      } catch {
+        // ignore — panel just opened
+      }
+    }
+    checkRunning();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secret]);
+
+  const startPolling = useCallback(() => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const status: IngestionStatus = await getIngestionStatus(secret);
+        if (status.status === "running") {
+          setIngestProgress(
+            `In corso... ${Math.round(status.elapsed_seconds ?? 0)}s`,
+          );
+        } else if (status.status === "completed") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setIngesting(false);
+          setIngestProgress("");
+          const docs = status.documents_indexed ?? 0;
+          const secs = Math.round(status.elapsed_seconds ?? 0);
+          showMessage(
+            `Ingestione completata: ${docs.toLocaleString("it-IT")} documenti in ${secs}s`,
+            10000,
+          );
+          onAction();
+        } else if (status.status === "error") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setIngesting(false);
+          setIngestProgress("");
+          showMessage(
+            `Errore ingestione: ${status.error ?? "errore sconosciuto"}`,
+            15000,
+          );
+        }
+      } catch {
+        // network error, keep polling
+      }
+    }, 5000);
+  }, [secret, onAction]);
 
   async function handleInvalidate() {
     if (!confirm("Sei sicuro? Verranno eliminate tutte le voci non revisionate.")) {
@@ -110,6 +178,35 @@ export default function AdminActions({
     }
   }
 
+  async function handleStartIngestion() {
+    if (
+      !confirm(
+        "Avviare la re-ingestione completa? Questo processo richiede 10-15 minuti e ricostruisce l'intero vectorstore.",
+      )
+    ) {
+      return;
+    }
+    setIngesting(true);
+    setIngestProgress("Avvio...");
+    try {
+      const res = await startIngestion(secret, true);
+      if (res.status === "already_running") {
+        showMessage("Ingestione già in corso!");
+      } else {
+        showMessage("Ingestione avviata in background");
+      }
+      startPolling();
+    } catch (err) {
+      setIngesting(false);
+      setIngestProgress("");
+      if (err instanceof Error && err.message === "AUTH_FAILED") {
+        onAuthFailed();
+      } else {
+        showMessage("Errore nell'avvio dell'ingestione");
+      }
+    }
+  }
+
   async function handleReloadVectorstore() {
     if (!confirm("Ricaricare il vectorstore dal disco? Usalo dopo aver eseguito run_ingestion.bat.")) {
       return;
@@ -132,6 +229,16 @@ export default function AdminActions({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <button
+        onClick={handleStartIngestion}
+        disabled={ingesting}
+        className={`rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 ${
+          ingesting ? "cursor-not-allowed opacity-50" : ""
+        }`}
+      >
+        {ingesting ? `🔄 ${ingestProgress}` : "🚀 Avvia Ingestione"}
+      </button>
+
       <button
         onClick={handleReloadVectorstore}
         disabled={reloading}

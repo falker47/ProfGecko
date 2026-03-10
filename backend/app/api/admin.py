@@ -1,7 +1,10 @@
 """Admin endpoints — ingestion + cache management (protected by JWT_SECRET)."""
 
+import asyncio
 import csv
 import io
+import logging
+import time
 from pathlib import Path as FilePath
 
 from fastapi import APIRouter, Body, File, HTTPException, Path, Query, Request, UploadFile
@@ -9,6 +12,13 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.core.cache import ResponseCache
+
+logger = logging.getLogger(__name__)
+
+# --- Background ingestion state ---
+_ingestion_status: str = "idle"  # idle | running | completed | error
+_ingestion_result: dict | None = None
+_ingestion_started_at: float | None = None
 
 
 class UpdateEntryBody(BaseModel):
@@ -105,100 +115,175 @@ async def reload_vectorstore(
     }
 
 
+async def _run_ingestion_background(app_state, force: bool):
+    """Background coroutine that performs the full ingestion pipeline."""
+    global _ingestion_status, _ingestion_result, _ingestion_started_at
+
+    try:
+        from app.config import get_settings
+        from app.core.embeddings import get_embeddings
+        from app.core.generation_mapper import MAX_POKEMON_PER_GEN
+        from app.core.llm import get_llm
+        from app.core.rag_chain import RAGChain
+        from app.core.vectorstore import get_vectorstore
+        from app.ingestion.fetcher import fetch_all_data
+        from app.ingestion.indexer import index_documents
+        from app.ingestion.pokeapi_client import PokeAPIClient
+        from app.ingestion.transformers import build_all_documents_for_generation
+
+        settings = get_settings()
+        persist_dir = settings.chroma_persist_dir
+
+        # Quick check: already indexed?
+        if not force:
+            from pathlib import Path
+
+            if Path(persist_dir).exists():
+                from langchain_chroma import Chroma
+
+                embeddings = get_embeddings(
+                    settings.embedding_provider, model=settings.embedding_model
+                )
+                existing = Chroma(
+                    persist_directory=persist_dir,
+                    collection_name=settings.chroma_collection_name,
+                    embedding_function=embeddings,
+                )
+                count = existing._collection.count()
+                if count > 0:
+                    _ingestion_status = "completed"
+                    _ingestion_result = {
+                        "status": "skipped",
+                        "message": f"ChromaDB already has {count} documents. Use force=true to re-index.",
+                        "documents_indexed": 0,
+                    }
+                    logger.info("Ingestion skipped: already %d documents", count)
+                    return
+
+        # Step 1: Fetch all data from PokeAPI
+        logger.info("Ingestion: fetching data from PokeAPI...")
+        async with PokeAPIClient(cache_dir="data/raw") as client:
+            all_data = await fetch_all_data(client, 1025)
+
+        # Step 2: Build documents for each generation
+        all_docs = []
+        generations = list(range(1, 10))
+        for gen in generations:
+            if gen not in MAX_POKEMON_PER_GEN:
+                continue
+            logger.info("Ingestion: building docs for gen %d...", gen)
+            docs = build_all_documents_for_generation(all_data, gen)
+            all_docs.extend(docs)
+
+        logger.info("Ingestion: total %d documents, starting indexing...", len(all_docs))
+
+        # Step 3: Index into ChromaDB
+        embeddings = get_embeddings(
+            settings.embedding_provider, model=settings.embedding_model
+        )
+        use_api_delay = settings.embedding_provider in ("gemini", "openai")
+        index_documents(
+            documents=all_docs,
+            embeddings=embeddings,
+            persist_dir=persist_dir,
+            collection_name=settings.chroma_collection_name,
+            use_api_delay=use_api_delay,
+        )
+
+        # Step 4: Reload the in-memory vectorstore + RAG chain
+        logger.info("Ingestion: reloading vectorstore and RAG chain...")
+        new_vs = get_vectorstore(persist_dir, settings.chroma_collection_name, embeddings)
+        app_state.vectorstore = new_vs
+
+        llm = get_llm(settings.llm_provider, model=settings.llm_model, temperature=settings.llm_temperature)
+        fallback_llm = None
+        if settings.llm_fallback_model and settings.llm_fallback_model != settings.llm_model:
+            fallback_llm = get_llm(settings.llm_provider, model=settings.llm_fallback_model, temperature=settings.llm_temperature)
+
+        app_state.rag_chain = RAGChain(
+            llm=llm, vectorstore=new_vs, k=settings.retriever_k, fallback_llm=fallback_llm,
+        )
+
+        elapsed = time.time() - (_ingestion_started_at or 0)
+        _ingestion_status = "completed"
+        _ingestion_result = {
+            "status": "completed",
+            "documents_indexed": len(all_docs),
+            "elapsed_seconds": round(elapsed, 1),
+        }
+        logger.info(
+            "Ingestion completed: %d documents in %.1fs",
+            len(all_docs), elapsed,
+        )
+
+    except Exception as exc:
+        elapsed = time.time() - (_ingestion_started_at or 0)
+        _ingestion_status = "error"
+        _ingestion_result = {
+            "status": "error",
+            "error": str(exc),
+            "elapsed_seconds": round(elapsed, 1),
+        }
+        logger.exception("Ingestion failed after %.1fs: %s", elapsed, exc)
+
+
 @router.post("/ingest")
 async def trigger_ingestion(
     request: Request,
     secret: str = Query(..., description="JWT_SECRET as auth"),
     force: bool = Query(False),
 ):
-    """Run data ingestion. Call once after first deploy.
+    """Start data ingestion in background. Poll /ingest/status for progress.
 
     Usage:
-        POST /api/admin/ingest?secret=YOUR_JWT_SECRET&force=false
+        POST /api/admin/ingest?secret=YOUR_JWT_SECRET&force=true
+    """
+    global _ingestion_status, _ingestion_result, _ingestion_started_at
+
+    if secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    if _ingestion_status == "running":
+        elapsed = time.time() - (_ingestion_started_at or 0)
+        return {
+            "status": "already_running",
+            "message": f"Ingestion already in progress ({round(elapsed)}s elapsed)",
+        }
+
+    _ingestion_status = "running"
+    _ingestion_result = None
+    _ingestion_started_at = time.time()
+
+    asyncio.create_task(_run_ingestion_background(request.app.state, force))
+
+    return {"status": "started", "message": "Ingestion started in background. Poll /ingest/status for progress."}
+
+
+@router.get("/ingest/status")
+async def ingestion_status(
+    request: Request,
+    secret: str = Query(..., description="JWT_SECRET as auth"),
+):
+    """Poll ingestion progress.
+
+    Usage:
+        GET /api/admin/ingest/status?secret=YOUR_JWT_SECRET
     """
     if secret != request.app.state.jwt_secret:
         raise HTTPException(status_code=403, detail="Invalid secret")
 
-    # Run ingestion in background so the request doesn't timeout
-    from app.config import get_settings
-    from app.core.embeddings import get_embeddings
-    from app.core.generation_mapper import MAX_POKEMON_PER_GEN
-    from app.ingestion.fetcher import fetch_all_data
-    from app.ingestion.indexer import index_documents
-    from app.ingestion.pokeapi_client import PokeAPIClient
-    from app.ingestion.transformers import build_all_documents_for_generation
-
-    settings = get_settings()
-    persist_dir = settings.chroma_persist_dir
-
-    # Quick check: already indexed?
-    if not force:
-        from pathlib import Path
-
-        if Path(persist_dir).exists():
-            from langchain_chroma import Chroma
-
-            embeddings = get_embeddings(
-                settings.embedding_provider, model=settings.embedding_model
-            )
-            existing = Chroma(
-                persist_directory=persist_dir,
-                collection_name=settings.chroma_collection_name,
-                embedding_function=embeddings,
-            )
-            count = existing._collection.count()
-            if count > 0:
-                return {
-                    "status": "skipped",
-                    "message": f"ChromaDB already has {count} documents. Use force=true to re-index.",
-                }
-
-    # Run ingestion (this takes 10-15 minutes)
-    async with PokeAPIClient(cache_dir="data/raw") as client:
-        all_data = await fetch_all_data(client, 1025)
-
-    all_docs = []
-    generations = list(range(1, 10))
-    for gen in generations:
-        if gen not in MAX_POKEMON_PER_GEN:
-            continue
-        docs = build_all_documents_for_generation(all_data, gen)
-        all_docs.extend(docs)
-
-    embeddings = get_embeddings(
-        settings.embedding_provider, model=settings.embedding_model
-    )
-    use_api_delay = settings.embedding_provider in ("gemini", "openai")
-    index_documents(
-        documents=all_docs,
-        embeddings=embeddings,
-        persist_dir=persist_dir,
-        collection_name=settings.chroma_collection_name,
-        use_api_delay=use_api_delay,
-    )
-
-    # Reload the in-memory vectorstore + RAG chain so the server uses the
-    # freshly indexed data without needing a restart.
-    from app.core.vectorstore import get_vectorstore
-    from app.core.llm import get_llm
-    from app.core.rag_chain import RAGChain
-
-    new_vs = get_vectorstore(persist_dir, settings.chroma_collection_name, embeddings)
-    request.app.state.vectorstore = new_vs
-
-    llm = get_llm(settings.llm_provider, model=settings.llm_model, temperature=settings.llm_temperature)
-    fallback_llm = None
-    if settings.llm_fallback_model and settings.llm_fallback_model != settings.llm_model:
-        fallback_llm = get_llm(settings.llm_provider, model=settings.llm_fallback_model, temperature=settings.llm_temperature)
-
-    request.app.state.rag_chain = RAGChain(
-        llm=llm, vectorstore=new_vs, k=settings.retriever_k, fallback_llm=fallback_llm,
-    )
-
-    return {
-        "status": "completed",
-        "documents_indexed": len(all_docs),
+    result = {
+        "status": _ingestion_status,
+        "started_at": _ingestion_started_at,
     }
+
+    if _ingestion_status == "running" and _ingestion_started_at:
+        result["elapsed_seconds"] = round(time.time() - _ingestion_started_at, 1)
+
+    if _ingestion_result:
+        result.update(_ingestion_result)
+
+    return result
 
 
 def _get_cache(request: Request) -> ResponseCache:

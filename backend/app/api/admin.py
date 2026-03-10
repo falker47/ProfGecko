@@ -204,24 +204,16 @@ async def _run_ingestion_background(app_state, force: bool):
             llm=llm, vectorstore=new_vs, k=settings.retriever_k, fallback_llm=fallback_llm,
         )
 
-        # Step 5: Invalidate stale strategic/build cache entries
-        cache_invalidated = 0
-        cache: ResponseCache | None = getattr(app_state, "cache", None)
-        if cache:
-            cache_invalidated = await cache.invalidate_strategic()
-            logger.info("Post-ingestion: %d stale build/strategy cache entries cleared", cache_invalidated)
-
         elapsed = time.time() - (_ingestion_started_at or 0)
         _ingestion_status = "completed"
         _ingestion_result = {
             "status": "completed",
             "documents_indexed": len(all_docs),
-            "cache_entries_invalidated": cache_invalidated,
             "elapsed_seconds": round(elapsed, 1),
         }
         logger.info(
-            "Ingestion completed: %d documents in %.1fs, %d cache entries invalidated",
-            len(all_docs), elapsed, cache_invalidated,
+            "Ingestion completed: %d documents in %.1fs",
+            len(all_docs), elapsed,
         )
 
     except Exception as exc:

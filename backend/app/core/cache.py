@@ -533,45 +533,6 @@ class ResponseCache:
         logger.info("Cache INVALIDATED: %d entries deleted (keep_reviewed=%s)", count, keep_reviewed)
         return count
 
-    async def invalidate_strategic(self) -> int:
-        """Clear non-reviewed cache entries for strategic/build queries.
-
-        Called automatically after re-ingestion to flush stale build
-        recommendations while keeping factual queries cached
-        (debolezze, stats, mosse, etc.).
-
-        Matches questions containing strategic keywords:
-        build, moveset, smogon, set competitivo, squadra, team, consiglio, etc.
-        """
-        strategic_patterns = [
-            "%build%", "%moveset%", "%smogon%",
-            "%set competitiv%", "%build competitiv%",
-            "%squadra%", "%team%", "%roster%",
-            "%consiglio%", "%consiglia%",
-            "%come usare%", "%come si usa%",
-            "%starter%", "%quale scegliere%",
-            "%strategia%", "%competitivo%",
-            "%counter%", "%contrastare%",
-            "%ev spread%", "%natura consigliata%",
-        ]
-        conditions = " OR ".join(
-            f"question LIKE ?" for _ in strategic_patterns
-        )
-        cursor = await self._db.execute(
-            f"""DELETE FROM response_cache
-                WHERE reviewed = 0
-                  AND ({conditions})""",
-            strategic_patterns,
-        )
-        await self._db.commit()
-        deleted = cursor.rowcount
-        if deleted:
-            logger.info(
-                "Cache INVALIDATE_STRATEGIC: %d stale build/strategy entries removed",
-                deleted,
-            )
-        return deleted
-
     async def cleanup(self, max_age_days: int = 90) -> int:
         """Remove old non-reviewed entries that haven't been hit recently."""
         cursor = await self._db.execute(

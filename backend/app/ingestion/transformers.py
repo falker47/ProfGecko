@@ -1604,11 +1604,48 @@ def _reconstruct_move_stats(move: dict, target_gen: int) -> dict:
     return current
 
 
+def _build_reverse_learnset(
+    pokemon_data: dict[int, dict],
+    species_data: dict[int, dict],
+    generation: int,
+) -> dict[str, list[str]]:
+    """Build reverse mapping: move_slug → sorted list of Pokemon IT names.
+
+    For each move, collects all Pokemon that can learn it in the
+    given generation (via any learn method in that gen's version groups).
+    Only includes default-form Pokemon up to the generation's dex cap.
+    """
+    max_id = MAX_POKEMON_PER_GEN.get(generation, 1025)
+    mapping: dict[str, set[str]] = {}
+
+    for pid, poke in pokemon_data.items():
+        if pid > max_id:
+            continue
+        sp = species_data.get(pid)
+        if not sp:
+            continue
+        name_it = (
+            _get_localized(sp.get("names", []), "it")
+            or poke["name"].replace("-", " ").title()
+        )
+
+        for m in poke.get("moves", []):
+            move_slug = m["move"]["name"]
+            for vgd in m.get("version_group_details", []):
+                vg_name = vgd["version_group"]["name"]
+                if _get_generation_for_move_version(vg_name) == generation:
+                    mapping.setdefault(move_slug, set()).add(name_it)
+                    break  # found match for this gen, skip other version groups
+
+    return {slug: sorted(names) for slug, names in mapping.items()}
+
+
 def build_move_documents(
     moves_data: dict[int, dict],
     generation: int,
     type_name_it: dict[str, str] | None = None,
     all_types: dict[int, dict] | None = None,
+    reverse_learnset: dict[str, list[str]] | None = None,
 ) -> list[Document]:
     """Build one Document per move for the given generation."""
     if type_name_it is None and all_types is not None:
@@ -1728,6 +1765,24 @@ Effetto: {stats['effect']}"""
 
         if meta_text:
             page_content += f"\n{meta_text}"
+
+        # Reverse learnset: which Pokemon learn this move
+        if reverse_learnset:
+            learners = reverse_learnset.get(move["name"], [])
+            if learners:
+                count = len(learners)
+                _MAX_LISTED = 40
+                if count <= _MAX_LISTED:
+                    learner_str = ", ".join(learners)
+                else:
+                    learner_str = (
+                        ", ".join(learners[:_MAX_LISTED])
+                        + f" e altri {count - _MAX_LISTED}"
+                    )
+                page_content += (
+                    f"\nPokemon che imparano questa mossa ({count}): "
+                    f"{learner_str}"
+                )
 
         metadata = {
             "entity_type": "move",
@@ -2763,10 +2818,14 @@ def build_all_documents_for_generation(
         type_name_it=type_name_it,
     ))
 
+    reverse_learnset = _build_reverse_learnset(
+        all_data["pokemon"], all_data["species"], generation,
+    )
     docs.extend(build_move_documents(
         all_data["moves"],
         generation,
         type_name_it=type_name_it,
+        reverse_learnset=reverse_learnset,
     ))
 
     docs.extend(build_type_documents(

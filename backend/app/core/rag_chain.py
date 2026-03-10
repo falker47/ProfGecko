@@ -48,6 +48,15 @@ _ENCOUNTER_KEYWORDS = frozenset({
     "beccare", "location", "incontro", "selvatico", "selvatici",
 })
 
+# Smogon competitive sets: excluded by default, included when the user
+# asks about competitive builds or uses Smogon-specific terms.
+_SMOGON_KEYWORDS = frozenset({
+    "smogon", "set competitivo", "set competitivi",
+    "build competitiva", "build competitive",
+    "ev spread", "moveset smogon", "set smogon",
+    "build smogon", "tier ou",
+})
+
 # Stop words italiane da ignorare nell'estrazione nomi entita.
 # NOTA: l'estrazione lavora in lowercase, quindi tutte le stop words
 # devono essere lowercase.
@@ -187,8 +196,9 @@ def _detect_summary_categories(question: str) -> list[str]:
 def _detect_excluded_types(question: str) -> list[str]:
     """Determina quali entity_type escludere dal retrieval ChromaDB.
 
-    Di default esclude 'item' e 'nature'. Li include solo se la
-    domanda contiene keyword specifiche (es. 'bacca', 'natura').
+    Di default esclude 'item', 'nature', 'encounter' e 'smogon_set'.
+    Li include solo se la domanda contiene keyword specifiche.
+    smogon_set viene incluso anche per query strategiche (build, team, ...).
     """
     q = question.lower()
     excluded: list[str] = []
@@ -198,6 +208,9 @@ def _detect_excluded_types(question: str) -> list[str]:
         excluded.append("nature")
     if not any(kw in q for kw in _ENCOUNTER_KEYWORDS):
         excluded.append("encounter")
+    # Include Smogon sets when: explicit Smogon keywords OR strategic query
+    if not any(kw in q for kw in _SMOGON_KEYWORDS) and not _is_strategic_query(q):
+        excluded.append("smogon_set")
     return excluded
 
 

@@ -60,6 +60,13 @@ DETTAGLI MOSSE:
 - Se "Priorita" NON appare nel contesto della mossa, la priorita e 0 (normale).
 - Possono apparire anche: stato inflitto, tentennamento, assorbimento, contraccolpo, cura, tasso critico, modifica statistiche.
 
+BUILD SMOGON:
+- Il contesto puo includere set competitivi da Smogon con EV, natura, strumento e mosse.
+- Se presenti, usa questi dati per consigliare build specifiche e dettagliate.
+- Le opzioni separate da "/" sono alternative equivalenti tra cui l'utente puo scegliere.
+- Se il Pokemon ha piu set, spiega brevemente quando usare ciascuno.
+- COPIA i nomi delle mosse, abilita e strumenti ESATTAMENTE come scritti nel contesto Smogon.
+
 Contesto (Generazione {generation}):
 {context}
 """
@@ -115,7 +122,15 @@ DETTAGLI MOSSE:
 - Se "Priorita" NON appare nel contesto della mossa, la priorita e 0 (normale).
 - Possono apparire anche: stato inflitto, tentennamento, assorbimento, contraccolpo, cura, tasso critico, modifica statistiche.
 
+BUILD SMOGON:
+- Il contesto puo includere set competitivi da Smogon con EV, natura, strumento e mosse.
+- Se presenti, usa questi dati per consigliare build specifiche e dettagliate.
+- Le opzioni separate da "/" sono alternative equivalenti tra cui l'utente puo scegliere.
+- Se il Pokemon ha piu set, spiega brevemente quando usare ciascuno.
+- COPIA i nomi delle mosse, abilita e strumenti ESATTAMENTE come scritti nel contesto Smogon.
+
 QUANDO DAI CONSIGLI SU BUILD/MOVESET:
+- Se il contesto include set Smogon, usali come base principale per i consigli.
 - Suggerisci 4 mosse scegliendo tra quelle elencate nel contesto del Pokemon.
 - Spiega brevemente perche (copertura tipo, STAB, utilita).
 - Per l'attaccante fisico/speciale, guarda le stat Attacco vs Att.Sp nel contesto.

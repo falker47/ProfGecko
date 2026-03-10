@@ -1,11 +1,17 @@
 """Transform raw PokeAPI JSON into per-generation LangChain Documents."""
 
+import logging
+
 from langchain_core.documents import Document
 
 from app.core.generation_mapper import (
     MAX_POKEMON_PER_GEN,
     VERSION_GROUP_TO_GEN,
 )
+from app.ingestion.smogon_client import fetch_smogon_sets
+from app.ingestion.smogon_transformer import build_smogon_documents
+
+logger = logging.getLogger(__name__)
 
 # --- Egg group EN → IT mapping (15 groups) ---
 
@@ -2771,5 +2777,23 @@ def build_all_documents_for_generation(
             all_data["species"],
             generation,
         ))
+
+    # Smogon competitive sets (OU tier)
+    try:
+        smogon_sets = fetch_smogon_sets(generation, "ou")
+        if smogon_sets:
+            smogon_docs = build_smogon_documents(
+                smogon_sets, all_data, generation, tier="ou",
+            )
+            docs.extend(smogon_docs)
+            logger.info(
+                "Gen %d: %d Smogon OU documents built",
+                generation, len(smogon_docs),
+            )
+    except Exception as exc:
+        logger.warning(
+            "Gen %d: Smogon fetch/build failed, skipping: %s",
+            generation, exc,
+        )
 
     return docs

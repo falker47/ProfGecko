@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from app.auth.dependencies import get_current_user_optional
+from app.config import get_settings
 from app.core.cache import ResponseCache
 from app.core.rag_chain import RAGChain
 from app.credits.dependencies import check_and_deduct_credit
@@ -108,7 +109,6 @@ async def chat_stream(
         should_refund = was_cache_hit or was_missing
         if should_refund and credit_info and user and request.app.state.db:
             try:
-                from app.config import get_settings
                 settings = get_settings()
                 db = request.app.state.db
                 await db.refund_last_deduction(user["id"])

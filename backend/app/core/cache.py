@@ -245,7 +245,7 @@ class ResponseCache:
             logger.info("Cache HIT (normalized) for %r gen=%d", question[:60], generation)
             return (row["response"], row["id"])
 
-        logger.info("Cache MISS for %r gen=%d", question[:60], generation)
+        logger.debug("Cache MISS for %r gen=%d", question[:60], generation)
         return None
 
     async def put(
@@ -255,7 +255,11 @@ class ResponseCache:
         response: str,
         feedback: str = "-",
     ) -> int | None:
-        """Store a response in the cache. Returns the entry ID, or None if duplicate."""
+        """Store a response in the cache.
+
+        Returns the entry ID (new or existing). If an exact duplicate
+        already exists, returns its ID without inserting a new row.
+        """
         exact = _exact_hash(question)
         normal = _normal_hash(question)
 
@@ -689,41 +693,57 @@ class ResponseCache:
         )
         group_rows = await group_cursor.fetchall()
 
-        # Step 2: for each group, fetch its entries
-        groups = []
-        for g in group_rows:
-            nhash, gen, cnt = g[0], g[1], g[2]
-            entries_cursor = await self._db.execute(
-                """SELECT id, question, hit_count, reviewed, feedback, created_at
-                   FROM response_cache
-                   WHERE normal_hash = ? AND generation = ?
-                   ORDER BY hit_count DESC, id ASC""",
-                (nhash, gen),
+        # Step 2: fetch all entries belonging to the duplicate groups in
+        # a single query instead of one query per group (avoids N+1).
+        if not group_rows:
+            groups = []
+        else:
+            hash_gen_pairs = [(g[0], g[1]) for g in group_rows]
+            placeholders = " OR ".join(
+                "(normal_hash = ? AND generation = ?)" for _ in hash_gen_pairs
             )
-            entry_rows = await entries_cursor.fetchall()
+            flat_params: list = []
+            for h, g in hash_gen_pairs:
+                flat_params.extend([h, g])
 
-            # Compute final tokens from the first entry's question
-            final_tokens = _compute_final_tokens(entry_rows[0][1]) if entry_rows else []
+            all_cursor = await self._db.execute(
+                f"""SELECT id, question, hit_count, reviewed, feedback,
+                           created_at, normal_hash, generation
+                    FROM response_cache
+                    WHERE {placeholders}
+                    ORDER BY normal_hash, generation, hit_count DESC, id ASC""",
+                flat_params,
+            )
+            all_rows = await all_cursor.fetchall()
 
-            entries = [
-                {
+            # Group rows by (normal_hash, generation)
+            from collections import defaultdict
+            entries_by_key: dict[tuple[str, int], list] = defaultdict(list)
+            for r in all_rows:
+                key = (r[6], r[7])  # normal_hash, generation
+                entries_by_key[key].append({
                     "id": r[0],
                     "question": r[1],
                     "hit_count": r[2],
                     "reviewed": bool(r[3]),
                     "feedback": r[4],
                     "created_at": r[5],
-                }
-                for r in entry_rows
-            ]
+                })
 
-            groups.append({
-                "normal_hash": nhash[:16],
-                "generation": gen,
-                "count": cnt,
-                "final_tokens": final_tokens,
-                "entries": entries,
-            })
+            groups = []
+            for g in group_rows:
+                nhash, gen, cnt = g[0], g[1], g[2]
+                entries = entries_by_key.get((nhash, gen), [])
+                # Compute final tokens from the first entry's question
+                final_tokens = _compute_final_tokens(entries[0]["question"]) if entries else []
+
+                groups.append({
+                    "normal_hash": nhash[:16],
+                    "generation": gen,
+                    "count": cnt,
+                    "final_tokens": final_tokens,
+                    "entries": entries,
+                })
 
         return {
             "groups": groups,

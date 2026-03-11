@@ -122,6 +122,7 @@ REGOLE PER CONSIGLI STRATEGICI:
 4. I dati si riferiscono alla Generazione {generation}.
 5. NON menzionare capipalestra, Superquattro, campioni o altri allenatori del gioco PER NOME a meno che quei dati non siano esplicitamente nel contesto. Se non ci sono, basa i consigli sulla copertura di tipo e le statistiche.
 6. I NOMI delle abilita e delle mosse nel contesto sono gia tradotti correttamente in italiano. COPIA i nomi ESATTAMENTE come scritti nel contesto, senza tradurli o modificarli.
+7. MAI inventare o indovinare nomi di mosse. Se il learnset di un Pokemon NON e nel contesto, NON menzionare mosse specifiche per quel Pokemon. Parla solo di tipi, statistiche e ruolo.
 
 DEBOLEZZE / RESISTENZE / IMMUNITA:
 - Ogni Pokemon ha una sezione "Efficacia tipi (difesa)" GIA CALCOLATA nel contesto.
@@ -182,6 +183,7 @@ QUANDO DAI CONSIGLI SU SQUADRA:
 - Considera la copertura di tipo complessiva della squadra.
 - Per le avventure in-game: considera la disponibilita nella generazione indicata.
 - NON citare matchup specifici contro capipalestra o Superquattro se quei dati non sono nel contesto. Ragiona su copertura di tipo e statistiche generali.
+- Per Pokemon alternativi o menzionati senza dati dettagliati nel contesto: indica SOLO nome, tipi e ruolo. NON inventare nomi di mosse specifiche. Se non hai il learnset di un Pokemon nel contesto, NON citare mosse per quel Pokemon.
 
 Contesto (Generazione {generation}):
 {context}

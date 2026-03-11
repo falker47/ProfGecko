@@ -10,6 +10,17 @@ from app.core.generation_mapper import (
 )
 from app.ingestion.smogon_client import fetch_smogon_sets
 from app.ingestion.smogon_transformer import build_smogon_documents
+from app.ingestion.translations import (
+    ENCOUNTER_METHOD_IT,
+    LOCATION_NAME_IT,
+    REGION_NAME_IT,
+    VARIANT_REGION_TO_GEN,
+    VERSION_NAME_IT,
+    VERSION_TO_GEN,
+    build_pokemon_name_lookup,
+    substitute_pokemon_names_in_text,
+    translate_pokemon_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2266,7 +2277,11 @@ def _build_type_name_lookup(all_types: dict[int, dict]) -> dict[str, str]:
     return type_name_it
 
 
-def build_trainer_documents(generation: int) -> list[Document]:
+def build_trainer_documents(
+    generation: int,
+    *,
+    pokemon_name_it: dict[str, str] | None = None,
+) -> list[Document]:
     """Build documents for gym leaders, Elite Four and champions.
 
     Uses static data from trainer_data.py (PokeAPI doesn't expose NPC
@@ -2275,6 +2290,11 @@ def build_trainer_documents(generation: int) -> list[Document]:
     teams so the LLM can reason about type matchups.
     """
     from app.ingestion.trainer_data import TRAINER_DATA, _t
+
+    def _tr(name: str) -> str:
+        if pokemon_name_it is None:
+            return name
+        return translate_pokemon_name(name, pokemon_name_it)
 
     docs: list[Document] = []
     for slug, data in TRAINER_DATA.items():
@@ -2303,7 +2323,7 @@ def build_trainer_documents(generation: int) -> list[Document]:
                 )
                 type_it = _t(gl["type"])
                 city = gl.get("city_it", "")
-                team_str = ", ".join(gl["team"])
+                team_str = ", ".join(_tr(p) for p in gl["team"])
                 version_note = f" [solo {gl['version']}]" if gl.get("version") else ""
                 lines.append(
                     f"{i}. {name_display} - {city} - Tipo: {type_it} "
@@ -2318,7 +2338,7 @@ def build_trainer_documents(generation: int) -> list[Document]:
                     name = kh["name"]
                     type_it = _t(kh["type"])
                     island = kh.get("island_it", "")
-                    team_str = ", ".join(kh.get("team", []))
+                    team_str = ", ".join(_tr(p) for p in kh.get("team", []))
                     lines.append(
                         f"- {name} - {island} - Tipo: {type_it} - Squadra: {team_str}"
                     )
@@ -2328,7 +2348,7 @@ def build_trainer_documents(generation: int) -> list[Document]:
                 for tc in data["trial_captains"]:
                     name = tc["name"]
                     type_it = _t(tc["type"])
-                    team_str = ", ".join(tc.get("team", []))
+                    team_str = ", ".join(_tr(p) for p in tc.get("team", []))
                     if team_str:
                         lines.append(f"- {name} - Tipo: {type_it} - Squadra: {team_str}")
                     else:
@@ -2346,7 +2366,7 @@ def build_trainer_documents(generation: int) -> list[Document]:
                     else name_it
                 )
                 type_it = _t(e4["type"])
-                team_str = ", ".join(e4["team"])
+                team_str = ", ".join(_tr(p) for p in e4["team"])
                 lines.append(f"{j}. {name_display} - Tipo: {type_it} - Squadra: {team_str}")
 
         # Champion
@@ -2360,7 +2380,7 @@ def build_trainer_documents(generation: int) -> list[Document]:
                 else name_it
             )
             type_it = _t(champ["type"])
-            team_str = ", ".join(champ["team"])
+            team_str = ", ".join(_tr(p) for p in champ["team"])
             note = f"\nNota: {champ['note']}" if champ.get("note") else ""
             lines.append(
                 f"Campione: {name_display} - Tipo: {type_it} - Squadra: {team_str}{note}"
@@ -2384,13 +2404,22 @@ def build_trainer_documents(generation: int) -> list[Document]:
 # --- Game Static Data Documents (starters, exclusives, legendaries) ---
 
 
-def build_game_data_documents(generation: int) -> list[Document]:
+def build_game_data_documents(
+    generation: int,
+    *,
+    pokemon_name_it: dict[str, str] | None = None,
+) -> list[Document]:
     """Build documents for starters, version exclusives and legendaries.
 
     Uses static data from game_data.py. Produces up to 3 documents per game
     slug that matches the given generation.
     """
     from app.ingestion.game_data import GAME_STATIC_DATA
+
+    def _tr(name: str) -> str:
+        if pokemon_name_it is None:
+            return name
+        return translate_pokemon_name(name, pokemon_name_it)
 
     docs: list[Document] = []
     for slug, data in GAME_STATIC_DATA.items():
@@ -2409,7 +2438,7 @@ def build_game_data_documents(generation: int) -> list[Document]:
                 "",
             ]
             for s in starters:
-                lines.append(f"- {s['name']} ({s['type_it']})")
+                lines.append(f"- {_tr(s['name'])} ({s['type_it']})")
             lines.append("")
             lines.append(
                 "Nota: lo starter scelto all'inizio del gioco non preclude "
@@ -2437,7 +2466,8 @@ def build_game_data_documents(generation: int) -> list[Document]:
             ]
             for version, poke_list in exclusives.items():
                 lines.append(
-                    f"Esclusivi di {version}: {', '.join(poke_list)}"
+                    f"Esclusivi di {version}: "
+                    f"{', '.join(_tr(p) for p in poke_list)}"
                 )
             lines.append("")
             lines.append(
@@ -2466,7 +2496,7 @@ def build_game_data_documents(generation: int) -> list[Document]:
             ]
             for leg in legendaries:
                 lines.append(
-                    f"- {leg['name']} ({leg['type_it']}) - {leg['location']}"
+                    f"- {_tr(leg['name'])} ({leg['type_it']}) - {leg['location']}"
                 )
             docs.append(Document(
                 page_content="\n".join(lines),
@@ -2483,12 +2513,17 @@ def build_game_data_documents(generation: int) -> list[Document]:
         # --- Best starter document ---
         best_starter = data.get("best_starter")
         if best_starter:
-            starter_names = ", ".join(s["name"] for s in data.get("starters", []))
+            starter_names = ", ".join(
+                _tr(s["name"]) for s in data.get("starters", [])
+            )
+            best_starter_text = substitute_pokemon_names_in_text(
+                best_starter, pokemon_name_it,
+            ) if pokemon_name_it else best_starter
             text = (
                 f"Miglior starter in {game_it} "
                 f"(Generazione {generation}, regione {region}):\n"
                 f"Gli starter disponibili sono: {starter_names}.\n\n"
-                f"{best_starter}"
+                f"{best_starter_text}"
             )
             docs.append(Document(
                 page_content=text,
@@ -2505,10 +2540,13 @@ def build_game_data_documents(generation: int) -> list[Document]:
         # --- Best team document ---
         best_team = data.get("best_team")
         if best_team:
+            best_team_text = substitute_pokemon_names_in_text(
+                best_team, pokemon_name_it,
+            ) if pokemon_name_it else best_team
             text = (
                 f"Miglior squadra consigliata per {game_it} "
                 f"(Generazione {generation}, regione {region}):\n\n"
-                f"{best_team}"
+                f"{best_team_text}"
             )
             docs.append(Document(
                 page_content=text,
@@ -2526,21 +2564,6 @@ def build_game_data_documents(generation: int) -> list[Document]:
 
 
 # --- Regional Variant Documents ---
-
-# Maps regional suffix to the generation that introduced the form
-_VARIANT_REGION_TO_GEN: dict[str, int] = {
-    "alola": 7,
-    "galar": 8,
-    "hisui": 8,  # Legends: Arceus counts as gen 8
-    "paldea": 9,
-}
-
-_REGION_NAME_IT: dict[str, str] = {
-    "alola": "Alola",
-    "galar": "Galar",
-    "hisui": "Hisui",
-    "paldea": "Paldea",
-}
 
 
 def build_regional_variant_documents(
@@ -2573,7 +2596,7 @@ def build_regional_variant_documents(
     for variant_name, vdata in regional_data.items():
         # Determine region from name suffix
         region_key = ""
-        for suffix in _VARIANT_REGION_TO_GEN:
+        for suffix in VARIANT_REGION_TO_GEN:
             if variant_name.endswith(f"-{suffix}"):
                 region_key = suffix
                 break
@@ -2581,11 +2604,11 @@ def build_regional_variant_documents(
             continue
 
         # Only include if this generation >= the introduction generation
-        intro_gen = _VARIANT_REGION_TO_GEN[region_key]
+        intro_gen = VARIANT_REGION_TO_GEN[region_key]
         if generation < intro_gen:
             continue
 
-        region_it = _REGION_NAME_IT.get(region_key, region_key.title())
+        region_it = REGION_NAME_IT.get(region_key, region_key.title())
 
         # Base Pokemon name (e.g. "raichu" from "raichu-alola")
         base_name = variant_name.rsplit(f"-{region_key}", 1)[0]
@@ -2713,71 +2736,20 @@ Gruppo uova: {egg_groups_it_str}"""
 
 # --- Encounter / Location Documents ---
 
-# Maps PokeAPI version slug to Italian name
-VERSION_NAME_IT: dict[str, str] = {
-    "red": "Rosso", "blue": "Blu", "yellow": "Giallo",
-    "gold": "Oro", "silver": "Argento", "crystal": "Cristallo",
-    "ruby": "Rubino", "sapphire": "Zaffiro", "emerald": "Smeraldo",
-    "firered": "Rosso Fuoco", "leafgreen": "Verde Foglia",
-    "diamond": "Diamante", "pearl": "Perla", "platinum": "Platino",
-    "heartgold": "Oro HeartGold", "soulsilver": "Argento SoulSilver",
-    "black": "Nero", "white": "Bianco",
-    "black-2": "Nero 2", "white-2": "Bianco 2",
-    "x": "X", "y": "Y",
-    "omega-ruby": "Rubino Omega", "alpha-sapphire": "Zaffiro Alpha",
-    "sun": "Sole", "moon": "Luna",
-    "ultra-sun": "Ultrasole", "ultra-moon": "Ultraluna",
-    "lets-go-pikachu": "Let's Go Pikachu",
-    "lets-go-eevee": "Let's Go Eevee",
-    "sword": "Spada", "shield": "Scudo",
-    "brilliant-diamond": "Diamante Lucente",
-    "shining-pearl": "Perla Splendente",
-    "legends-arceus": "Leggende Arceus",
-    "scarlet": "Scarlatto", "violet": "Violetto",
-}
-
-# Maps PokeAPI version slug to generation number
-VERSION_TO_GEN: dict[str, int] = {
-    "red": 1, "blue": 1, "yellow": 1,
-    "gold": 2, "silver": 2, "crystal": 2,
-    "ruby": 3, "sapphire": 3, "emerald": 3,
-    "firered": 3, "leafgreen": 3,
-    "diamond": 4, "pearl": 4, "platinum": 4,
-    "heartgold": 4, "soulsilver": 4,
-    "black": 5, "white": 5, "black-2": 5, "white-2": 5,
-    "x": 6, "y": 6, "omega-ruby": 6, "alpha-sapphire": 6,
-    "sun": 7, "moon": 7, "ultra-sun": 7, "ultra-moon": 7,
-    "lets-go-pikachu": 7, "lets-go-eevee": 7,
-    "sword": 8, "shield": 8,
-    "brilliant-diamond": 8, "shining-pearl": 8,
-    "legends-arceus": 8,
-    "scarlet": 9, "violet": 9,
-}
-
 
 def _format_location_name(slug: str) -> str:
-    """Convert PokeAPI location area slug to readable name.
-
-    'viridian-forest-area' -> 'Viridian Forest'
-    'kanto-route-2-area' -> 'Kanto Route 2'
-    """
-    name = slug.replace("-", " ").title()
-    # Remove trailing "Area" if present
-    if name.endswith(" Area"):
-        name = name[:-5].rstrip()
-    return name
+    """Convert PokeAPI location area slug to readable Italian name."""
+    clean = slug
+    if clean.endswith("-area"):
+        clean = clean[:-5].rstrip("-")
+    if clean in LOCATION_NAME_IT:
+        return LOCATION_NAME_IT[clean]
+    return clean.replace("-", " ").title()
 
 
 def _format_encounter_method(method_slug: str) -> str:
     """Translate encounter method to short Italian label."""
-    methods = {
-        "walk": "erba", "old-rod": "Amo Vecchio",
-        "good-rod": "Amo Buono", "super-rod": "Super Amo",
-        "surf": "surf", "rock-smash": "spaccaroccia",
-        "headbutt": "Colpoditesta", "gift": "regalo",
-        "gift-egg": "uovo regalo",
-    }
-    return methods.get(method_slug, method_slug.replace("-", " "))
+    return ENCOUNTER_METHOD_IT.get(method_slug, method_slug.replace("-", " ").title())
 
 
 def build_encounter_documents(
@@ -2890,6 +2862,7 @@ def build_all_documents_for_generation(
     # Pre-build shared lookups (una volta sola per generazione)
     type_name_it = _build_type_name_lookup(all_data["types"])
     type_table = _build_type_effectiveness_table(all_data["types"], generation)
+    pokemon_name_it = build_pokemon_name_lookup(all_data["species"])
 
     docs.extend(build_pokemon_documents(
         all_data["pokemon"],
@@ -2970,9 +2943,9 @@ def build_all_documents_for_generation(
         generation,
     ))
 
-    docs.extend(build_trainer_documents(generation))
+    docs.extend(build_trainer_documents(generation, pokemon_name_it=pokemon_name_it))
 
-    docs.extend(build_game_data_documents(generation))
+    docs.extend(build_game_data_documents(generation, pokemon_name_it=pokemon_name_it))
 
     # Regional variants (if fetched)
     if all_data.get("regional_variants"):

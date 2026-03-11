@@ -14,21 +14,12 @@ our ChromaDB documents (e.g. "Roccia", "Acqua", "Fuoco").
 
 from __future__ import annotations
 
-# ── Type name mapping EN → IT (same as in transformers.py) ────────
-_TYPE_EN_TO_IT = {
-    "Normal": "Normale", "Fire": "Fuoco", "Water": "Acqua",
-    "Electric": "Elettro", "Grass": "Erba", "Ice": "Ghiaccio",
-    "Fighting": "Lotta", "Poison": "Veleno", "Ground": "Terra",
-    "Flying": "Volante", "Psychic": "Psico", "Bug": "Coleottero",
-    "Rock": "Roccia", "Ghost": "Spettro", "Dragon": "Drago",
-    "Dark": "Buio", "Steel": "Acciaio", "Fairy": "Folletto",
-    "Mixed": "Misto",
-}
+from app.ingestion.translations import TYPE_EN_TO_IT
 
 
 def _t(en_type: str) -> str:
     """Translate type name EN → IT."""
-    return _TYPE_EN_TO_IT.get(en_type, en_type)
+    return TYPE_EN_TO_IT.get(en_type, en_type)
 
 
 # ── Trainer data per game ────────────────────────────────────────

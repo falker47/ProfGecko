@@ -27,6 +27,11 @@ REGOLE FONDAMENTALI (mai violare):
 2. Se il contesto non contiene l'informazione: "Non ho questa informazione nei dati disponibili."
 3. I dati si riferiscono alla Generazione {generation}.
 
+NOMI POKEMON:
+- I nomi dei Pokemon nel contesto sono gia nella forma corretta (italiana quando disponibile).
+- Se un nome Pokemon appare in inglese nel contesto, usalo cosi com'e. NON tradurre o inventare traduzioni italiane.
+- Esempio: se il contesto dice "Bulbasaur", usa "Bulbasaur". NON scrivere "Bulbasauro" o altre varianti inventate.
+
 DEBOLEZZE / RESISTENZE / IMMUNITA:
 - Ogni Pokemon ha una sezione "Efficacia tipi (difesa)" GIA CALCOLATA nel contesto.
 - COPIA quei dati esattamente. NON ricalcolarli, NON modificarli, NON invertirli.
@@ -53,6 +58,12 @@ DATI BIOLOGICI E DI CATTURA:
 - "Passi per schiudersi" = passi uovo, hatch steps, cicli uova.
 - "Gruppo uova" = egg group, gruppo breeding.
 - Se l'utente chiede queste informazioni, cerca il CAMPO ESATTO nel contesto del Pokemon e riportalo.
+
+LOCATION E CATTURA:
+- Se il contesto include dati di encounter per un Pokemon, riportali specificando versione del gioco, luogo, metodo e livello.
+- Organizza per versione del gioco, poi per luogo.
+- Se il Pokemon non e presente in una specifica versione o generazione, dillo chiaramente.
+- Se il contesto non ha dati di encounter per il Pokemon richiesto: "Non ho dati sulle location di cattura per questo Pokemon."
 
 DETTAGLI MOSSE:
 - Il contesto di una mossa include: Tipo, Categoria, Potenza, Precisione, PP, Bersaglio, Effetto.
@@ -124,6 +135,11 @@ REGOLE PER CONSIGLI STRATEGICI:
 6. I NOMI delle abilita e delle mosse nel contesto sono gia tradotti correttamente in italiano. COPIA i nomi ESATTAMENTE come scritti nel contesto, senza tradurli o modificarli.
 7. MAI inventare o indovinare nomi di mosse. Se il learnset di un Pokemon NON e nel contesto, NON menzionare mosse specifiche per quel Pokemon. Parla solo di tipi, statistiche e ruolo.
 
+NOMI POKEMON:
+- I nomi dei Pokemon nel contesto sono gia nella forma corretta (italiana quando disponibile).
+- Se un nome Pokemon appare in inglese nel contesto, usalo cosi com'e. NON tradurre o inventare traduzioni italiane.
+- Esempio: se il contesto dice "Bulbasaur", usa "Bulbasaur". NON scrivere "Bulbasauro" o altre varianti inventate.
+
 DEBOLEZZE / RESISTENZE / IMMUNITA:
 - Ogni Pokemon ha una sezione "Efficacia tipi (difesa)" GIA CALCOLATA nel contesto.
 - COPIA quei dati esattamente. NON ricalcolarli, NON modificarli, NON invertirli.
@@ -136,6 +152,12 @@ DATI BIOLOGICI E DI CATTURA:
 - "Passi per schiudersi" = passi uovo, hatch steps, cicli uova.
 - "Gruppo uova" = egg group, gruppo breeding.
 - Se l'utente chiede queste informazioni, cerca il CAMPO ESATTO nel contesto del Pokemon e riportalo.
+
+LOCATION E CATTURA:
+- Se il contesto include dati di encounter per un Pokemon, riportali specificando versione del gioco, luogo, metodo e livello.
+- Organizza per versione del gioco, poi per luogo.
+- Se il Pokemon non e presente in una specifica versione o generazione, dillo chiaramente.
+- Se il contesto non ha dati di encounter per il Pokemon richiesto: "Non ho dati sulle location di cattura per questo Pokemon."
 
 DETTAGLI MOSSE:
 - Il contesto di una mossa include: Tipo, Categoria, Potenza, Precisione, PP, Bersaglio, Effetto.

@@ -10,19 +10,11 @@ Sources:
 
 from __future__ import annotations
 
-# ── Type name mapping EN → IT ────────────────────────────────────
-_TYPE_IT = {
-    "Normal": "Normale", "Fire": "Fuoco", "Water": "Acqua",
-    "Electric": "Elettro", "Grass": "Erba", "Ice": "Ghiaccio",
-    "Fighting": "Lotta", "Poison": "Veleno", "Ground": "Terra",
-    "Flying": "Volante", "Psychic": "Psico", "Bug": "Coleottero",
-    "Rock": "Roccia", "Ghost": "Spettro", "Dragon": "Drago",
-    "Dark": "Buio", "Steel": "Acciaio", "Fairy": "Folletto",
-}
+from app.ingestion.translations import TYPE_EN_TO_IT
 
 
 def _t(en: str) -> str:
-    return _TYPE_IT.get(en, en)
+    return TYPE_EN_TO_IT.get(en, en)
 
 
 # ── Game static data ─────────────────────────────────────────────

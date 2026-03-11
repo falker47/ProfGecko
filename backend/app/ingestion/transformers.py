@@ -375,6 +375,39 @@ def _get_generation_for_move_version(version_group_name: str) -> int | None:
     return VERSION_GROUP_TO_GEN.get(version_group_name)
 
 
+def _extract_learnset_for_gen(
+    poke: dict,
+    gen: int,
+    move_name_it: dict[str, str],
+) -> tuple[list[tuple[int, str]], list[str]]:
+    """Extract level-up and TM/HM moves for a Pokemon in a specific generation.
+
+    Returns (levelup_moves, mt_moves) where:
+    - levelup_moves: sorted list of (level, "MoveName (Lv.X)") tuples
+    - mt_moves: unsorted list of Italian move names learned via TM/HM
+    """
+    levelup_moves: list[tuple[int, str]] = []
+    mt_moves: list[str] = []
+    for m in poke.get("moves", []):
+        for vgd in m.get("version_group_details", []):
+            vg_name = vgd["version_group"]["name"]
+            vg_gen = _get_generation_for_move_version(vg_name)
+            if vg_gen == gen:
+                method = vgd["move_learn_method"]["name"]
+                level = vgd.get("level_learned_at", 0)
+                move_slug = m["move"]["name"]
+                move_name = move_name_it.get(
+                    move_slug, move_slug.replace("-", " ").title()
+                )
+                if method == "level-up" and level > 0:
+                    levelup_moves.append((level, f"{move_name} (Lv.{level})"))
+                elif method == "machine":
+                    mt_moves.append(move_name)
+                break
+    levelup_moves.sort(key=lambda x: x[0])
+    return levelup_moves, mt_moves
+
+
 def _get_pokemon_abilities_for_gen(
     poke: dict,
     target_gen: int,
@@ -707,26 +740,21 @@ def build_pokemon_documents(
         # Formato compatto: mosse per livello con "(Lv.X)", mosse MT solo nomi.
         # Manteniamo TUTTI i nomi (serve per query tipo "Charizard impara Terremoto?")
         # ma evitiamo di ripetere "(MT)" per ogni mossa.
-        levelup_moves: list[tuple[int, str]] = []
-        mt_moves: list[str] = []
-        for m in poke.get("moves", []):
-            for vgd in m.get("version_group_details", []):
-                vg_name = vgd["version_group"]["name"]
-                vg_gen = _get_generation_for_move_version(vg_name)
-                if vg_gen == generation:
-                    method = vgd["move_learn_method"]["name"]
-                    level = vgd.get("level_learned_at", 0)
-                    move_slug = m["move"]["name"]
-                    move_name = move_name_it.get(
-                        move_slug, move_slug.replace("-", " ").title()
-                    )
-                    if method == "level-up" and level > 0:
-                        levelup_moves.append((level, f"{move_name} (Lv.{level})"))
-                    elif method == "machine":
-                        mt_moves.append(move_name)
+        # Se il Pokemon non ha mosse in questa generazione (es. non presente
+        # nel Pokedex regionale), cerca all'indietro la gen piu' recente con dati.
+        levelup_moves, mt_moves = _extract_learnset_for_gen(
+            poke, generation, move_name_it,
+        )
+        learnset_gen = generation
+        if not levelup_moves and not mt_moves:
+            for fb_gen in range(generation - 1, 0, -1):
+                fb_lu, fb_mt = _extract_learnset_for_gen(
+                    poke, fb_gen, move_name_it,
+                )
+                if fb_lu or fb_mt:
+                    levelup_moves, mt_moves = fb_lu, fb_mt
+                    learnset_gen = fb_gen
                     break
-        # Ordina mosse per livello
-        levelup_moves.sort(key=lambda x: x[0])
 
         # Formatta sezione mosse compatta
         learnset_lines: list[str] = []
@@ -841,7 +869,7 @@ Passi per schiudersi: {hatch_steps}
 Descrizione Pokedex:
 {flavor}
 
-Mosse apprendibili (Generazione {generation}):
+Mosse apprendibili{f' (dalla Generazione {learnset_gen}, non presente in Gen {generation})' if learnset_gen != generation else f' (Generazione {generation})'}:
 {learnset_text}
 
 Leggendario: {'Si' if is_legendary else 'No'}
@@ -1385,6 +1413,19 @@ def build_pokemon_build_documents(
             move_name_it, types_en, dominant_atk,
         )
 
+        # Fallback: se nessuna mossa in questa gen, prova gens precedenti
+        build_gen = generation
+        if not stab and not cov:
+            for fb_gen in range(generation - 1, 0, -1):
+                fb_stab, fb_cov, fb_status = _rank_pokemon_moves(
+                    poke, move_by_slug, fb_gen, type_name_it,
+                    move_name_it, types_en, dominant_atk,
+                )
+                if fb_stab or fb_cov:
+                    stab, cov, status_names = fb_stab, fb_cov, fb_status
+                    build_gen = fb_gen
+                    break
+
         if dominant_atk == "special":
             stat_line = f"Att.Sp: {sp_atk} | Attacco: {atk} | Velocita: {speed}"
         else:
@@ -1395,6 +1436,11 @@ def build_pokemon_build_documents(
             f"Generazione: {generation} | Ruolo: {role} | Tipi: {'/'.join(types_it)}",
             f"{stat_line} | BST: {bst}",
         ]
+        if build_gen != generation:
+            sections.append(
+                f"(Dati mosse dalla Generazione {build_gen},"
+                f" non presente in Gen {generation})"
+            )
 
         if stab:
             cls = ""

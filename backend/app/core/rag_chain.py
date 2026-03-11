@@ -285,6 +285,39 @@ def _extract_candidate_names(question: str) -> list[str]:
     return base_candidates
 
 
+# Keywords that indicate a team-building query (subset of _STRATEGIC_KEYWORDS)
+_TEAM_KEYWORDS = frozenset({
+    "squadra", "team", "roster", "composizione",
+})
+
+
+def _extract_team_pokemon_names(text: str) -> list[str]:
+    """Extract Pokemon names from team recommendation text.
+
+    Handles bullet-list formats commonly used in team_roster and
+    best_team documents:
+      "- Darmanitan (Fuoco) - desc"
+      "- Darmanitan: Fuoco, Atk 140, ..."
+      "- Darmanitan: Fuoco/Veleno, BST 480, Sweeper [Leggendario]"
+
+    Returns lowercased names, deduplicated and in order of appearance.
+    """
+    seen: set[str] = set()
+    names: list[str] = []
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line.startswith("- "):
+            continue
+        rest = line[2:].strip()
+        match = re.match(r"([a-zA-ZÀ-ÿ][\w\-]*)", rest)
+        if match:
+            name = match.group(1).lower()
+            if len(name) >= 3 and name not in _STOP_WORDS and name not in seen:
+                seen.add(name)
+                names.append(name)
+    return names
+
+
 def _format_docs(docs: list[Document]) -> str:
     return "\n\n---\n\n".join(doc.page_content for doc in docs)
 
@@ -636,7 +669,9 @@ class RAGChain:
         Per domande strategiche (build, squadra, consigli): k viene aumentato
         di 6 per fornire più contesto al LLM.
         """
-        effective_k = self.k + 6 if is_strategic else self.k
+        q_lower = original_question.lower()
+        is_team_query = is_strategic and any(kw in q_lower for kw in _TEAM_KEYWORDS)
+        effective_k = self.k + (12 if is_team_query else 6) if is_strategic else self.k
 
         # Phase 0: summary document matching per domande analitiche
         summary_docs = self._find_summaries(original_question, generation)
@@ -690,7 +725,69 @@ class RAGChain:
             original_question, generation, retrieval_query=retrieval_query,
         )
 
-        # Combina summary + trainer + name match (summary e trainer prima)
+        # Phase 1.5: Auto-retrieval build docs per query team
+        # Quando l'utente chiede una squadra senza nominare Pokemon specifici,
+        # estrae i nomi dai doc game_info (best_team) e summary (team_roster)
+        # e recupera i build docs corrispondenti per fornire al LLM
+        # stats e mosse consigliate per ogni Pokemon raccomandato.
+        team_build_docs: list[Document] = []
+        if is_team_query and not exact_docs:
+            team_pokemon_names: list[str] = []
+            # Priorita': best_team (game-specific), poi team_roster (gen-wide)
+            for doc in game_info_docs:
+                if doc.metadata.get("info_category") == "best_team":
+                    team_pokemon_names.extend(
+                        _extract_team_pokemon_names(doc.page_content),
+                    )
+            if not team_pokemon_names:
+                for doc in summary_docs:
+                    if doc.metadata.get("summary_category") == "team_roster_by_role":
+                        team_pokemon_names.extend(
+                            _extract_team_pokemon_names(doc.page_content),
+                        )
+
+            if team_pokemon_names:
+                collection = self.vectorstore._collection
+                seen_build_ids: set[str] = set()
+                # Limita a max 6 build docs (una squadra tipica)
+                for name in team_pokemon_names[:8]:
+                    if len(team_build_docs) >= 6:
+                        break
+                    try:
+                        results = collection.get(
+                            where={
+                                "$and": [
+                                    {"generation": generation},
+                                    {"entity_type": "build"},
+                                    {"$or": [
+                                        {"name_it": name},
+                                        {"name_en": name},
+                                    ]},
+                                ],
+                            },
+                            include=["documents", "metadatas"],
+                        )
+                    except Exception:
+                        logger.warning(
+                            "Build doc fetch failed for %r", name,
+                            exc_info=True,
+                        )
+                        continue
+                    for j, doc_id in enumerate(results["ids"]):
+                        if doc_id not in seen_build_ids:
+                            seen_build_ids.add(doc_id)
+                            team_build_docs.append(Document(
+                                page_content=results["documents"][j],
+                                metadata=results["metadatas"][j],
+                            ))
+                if team_build_docs:
+                    logger.info(
+                        "Team auto-retrieval: found %d build docs for %r",
+                        len(team_build_docs),
+                        [d.metadata.get("name_it") for d in team_build_docs],
+                    )
+
+        # Combina summary + trainer + name match + team build (summary e trainer prima)
         pre_contents = {s.page_content for s in summary_docs}
         pre_docs = summary_docs + [
             d for d in trainer_docs
@@ -699,6 +796,11 @@ class RAGChain:
         pre_contents.update(d.page_content for d in pre_docs)
         pre_docs += [
             d for d in exact_docs
+            if d.page_content not in pre_contents
+        ]
+        pre_contents.update(d.page_content for d in exact_docs)
+        pre_docs += [
+            d for d in team_build_docs
             if d.page_content not in pre_contents
         ]
 
@@ -750,14 +852,16 @@ class RAGChain:
         final_docs = pre_docs[:effective_k]
 
         logger.info(
-            "Query: %r | Gen: %d | Strategic: %s | Excluded: %s | Summary: %d | Trainer: %d | NameMatch: %d | Semantic: %d | Final: %d | Types: %s",
+            "Query: %r | Gen: %d | Strategic: %s | Team: %s | Excluded: %s | Summary: %d | Trainer: %d | NameMatch: %d | TeamBuild: %d | Semantic: %d | Final: %d | Types: %s",
             retrieval_query[:80],
             generation,
             is_strategic,
+            is_team_query,
             excluded,
             len(summary_docs),
             len(trainer_docs),
             len(exact_docs),
+            len(team_build_docs),
             len(semantic_docs),
             len(final_docs),
             [d.metadata.get("entity_type", "?") for d in final_docs],

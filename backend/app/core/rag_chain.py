@@ -31,6 +31,7 @@ _NATURE_KEYWORDS = frozenset({
 # Keywords that trigger game_info document injection
 _GAME_INFO_KEYWORDS = frozenset({
     "starter", "iniziale", "iniziali", "quale scegliere",
+    "squadra", "team", "pokemon da usare",
     "esclusivo", "esclusivi", "esclusiva", "exclusive",
     "solo in", "differenze versione",
     "leggendario", "leggendari", "mitico", "mitici",
@@ -550,8 +551,18 @@ class RAGChain:
 
         # Determine which categories to fetch based on keywords
         categories: list[str] = []
-        if any(kw in q for kw in ("starter", "iniziale", "iniziali", "quale scegliere")):
-            categories.append("starters")
+
+        # Detect "best/recommendation" intent
+        _best_kw = ("miglior", "migliore", "migliori", "best",
+                     "consiglio", "consigliato", "consigliata",
+                     "quale scegliere", "chi scegliere")
+        is_best = any(kw in q for kw in _best_kw)
+
+        if any(kw in q for kw in ("starter", "iniziale", "iniziali")):
+            categories.append("best_starter" if is_best else "starters")
+        if any(kw in q for kw in ("squadra", "team", "pokemon da usare")):
+            categories.append("best_team" if is_best else "starters")
+
         if any(kw in q for kw in ("esclusivo", "esclusivi", "esclusiva", "exclusive",
                                    "solo in", "differenze versione")):
             categories.append("version_exclusives")

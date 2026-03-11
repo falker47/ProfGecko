@@ -44,7 +44,7 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
         {/* Bubble */}
         <div
           className={clsx(
-            "max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed",
+            "max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-relaxed sm:max-w-[80%]",
             isUser
               ? "bg-emerald-600 text-white"
               : "bg-white text-gray-800 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700",
@@ -53,7 +53,7 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : (
-            <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-headings:my-2 prose-table:my-2 prose-hr:my-2 prose-strong:font-semibold dark:prose-invert">
+            <div className="prose prose-sm max-w-none overflow-x-auto prose-p:my-1 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-headings:my-2 prose-table:my-2 prose-hr:my-2 prose-strong:font-semibold dark:prose-invert">
               <Markdown>{message.content || "..."}</Markdown>
             </div>
           )}

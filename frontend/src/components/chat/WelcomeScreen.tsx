@@ -31,19 +31,19 @@ export default function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps)
   return (
     <div className="flex flex-1 animate-[fade-in_0.3s_ease-out] flex-col items-center justify-center px-4 py-8">
       {/* Avatar */}
-      <div className="mb-5 rounded-full shadow-xl ring-4 ring-emerald-200/70 dark:ring-emerald-700/70">
+      <div className="mb-5 rounded-full shadow-xl ring-2 ring-emerald-200/70 sm:ring-4 dark:ring-emerald-700/70">
         <Image
           src="/profgallade-avatar.jpg"
           alt="Prof. Gallade"
           width={128}
           height={128}
-          className="rounded-full"
+          className="h-20 w-20 rounded-full sm:h-32 sm:w-32"
           priority
         />
       </div>
 
       {/* Title */}
-      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t.siteTitle}</h2>
+      <h2 className="text-xl font-bold text-gray-800 sm:text-2xl dark:text-gray-100">{t.siteTitle}</h2>
 
       {/* Subtitle badge */}
       <span className="mb-4 mt-1.5 inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
@@ -51,7 +51,7 @@ export default function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps)
       </span>
 
       {/* Welcome message */}
-      <p className="mb-8 max-w-lg text-center text-base leading-relaxed text-gray-600 dark:text-gray-400">
+      <p className="mb-8 max-w-lg text-center text-sm leading-relaxed text-gray-600 sm:text-base dark:text-gray-400">
         {t.welcomeMessage}
       </p>
 
@@ -61,7 +61,7 @@ export default function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps)
           <button
             key={q}
             onClick={() => onSuggestionClick(q)}
-            className="group flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-left text-sm text-gray-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md active:translate-y-0 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-emerald-600"
+            className="group flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md active:translate-y-0 sm:px-3.5 sm:py-2.5 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-emerald-600"
           >
             <span className="mt-0.5 shrink-0 text-emerald-500 transition-colors group-hover:text-emerald-600 dark:text-emerald-400">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">

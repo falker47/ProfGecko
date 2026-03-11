@@ -21,18 +21,15 @@ export default function Header() {
 
   return (
     <header className="bg-emerald-700 text-white shadow-md dark:bg-emerald-900">
-      <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
+      <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-3 sm:gap-3">
         <Image
           src="/profgallade-avatar.jpg"
           alt="Prof. Gallade"
           width={40}
           height={40}
-          className="h-10 w-10 rounded-full ring-2 ring-emerald-400"
+          className="h-8 w-8 rounded-full ring-1 ring-emerald-400 sm:h-10 sm:w-10 sm:ring-2"
         />
-        <div className="flex-1">
-          <h1 className="text-lg font-bold leading-tight">{t.siteTitle}</h1>
-          <p className="text-xs text-emerald-200">{t.siteSubtitle}</p>
-        </div>
+        <h1 className="flex-1 truncate text-lg font-bold leading-tight">{t.siteTitle}</h1>
 
         {/* Theme toggle */}
         <button

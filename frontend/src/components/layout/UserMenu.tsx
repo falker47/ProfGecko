@@ -47,7 +47,7 @@ export default function UserMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+        <div className="absolute right-0 top-full z-50 mt-2 w-48 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-2 shadow-lg sm:w-56 dark:border-gray-700 dark:bg-gray-800">
           <div className="border-b border-gray-100 px-4 pb-2 dark:border-gray-700">
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>

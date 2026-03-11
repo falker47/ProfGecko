@@ -93,8 +93,8 @@ export default function TokenInspector({
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-        <p className="text-xs text-gray-400">Caricamento token...</p>
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3">
+        <p className="text-xs text-gray-400 dark:text-gray-500">Caricamento token...</p>
       </div>
     );
   }
@@ -107,8 +107,8 @@ export default function TokenInspector({
   const removedGame = result.pipeline["3b_game_titles_removed"];
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-      <p className="mb-2 text-xs font-medium uppercase text-gray-500">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 p-3">
+      <p className="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
         Token hash — clicca per rendere stopword
       </p>
 
@@ -121,13 +121,13 @@ export default function TokenInspector({
               onClick={() => handleAddStopword(token)}
               disabled={busy !== null}
               title={`Aggiungi "${token}" come stopword`}
-              className="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-mono text-xs text-emerald-800 transition-colors hover:bg-red-50 hover:border-red-300 hover:text-red-700 disabled:opacity-50"
+              className="rounded-full border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 font-mono text-xs text-emerald-800 dark:text-emerald-200 transition-colors hover:bg-red-50 dark:hover:bg-red-950 hover:border-red-300 dark:hover:border-red-700 hover:text-red-700 dark:hover:text-red-400 disabled:opacity-50"
             >
               {busy === token ? "..." : token}
             </button>
           ))
         ) : (
-          <span className="text-xs text-gray-400">Nessun token rimasto</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">Nessun token rimasto</span>
         )}
       </div>
 
@@ -136,11 +136,11 @@ export default function TokenInspector({
         removedCustom.length > 0 ||
         removedGame.length > 0) && (
         <div className="flex flex-wrap gap-1.5">
-          <span className="self-center text-xs text-gray-400">Rimossi:</span>
+          <span className="self-center text-xs text-gray-400 dark:text-gray-500">Rimossi:</span>
           {removedBuiltin.map((token, i) => (
             <span
               key={`b-${token}-${i}`}
-              className="rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-400 line-through"
+              className="rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 font-mono text-xs text-gray-400 dark:text-gray-500 line-through"
               title="Stopword built-in (non rimovibile)"
             >
               {token}
@@ -153,7 +153,7 @@ export default function TokenInspector({
               onClick={() => handleRemoveStopword(token)}
               disabled={busy !== null}
               title={`Rimuovi "${token}" dalle stopword`}
-              className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-mono text-xs text-amber-600 line-through transition-colors hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 hover:no-underline disabled:opacity-50"
+              className="rounded-full border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950 px-2.5 py-1 font-mono text-xs text-amber-600 dark:text-amber-400 line-through transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-950 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-300 hover:no-underline disabled:opacity-50"
             >
               {busy === token ? "..." : token}
             </button>
@@ -161,7 +161,7 @@ export default function TokenInspector({
           {removedGame.map((token, i) => (
             <span
               key={`g-${token}-${i}`}
-              className="rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-400 line-through"
+              className="rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 font-mono text-xs text-gray-400 dark:text-gray-500 line-through"
               title="Titolo gioco (non rimovibile)"
             >
               {token}
@@ -172,7 +172,7 @@ export default function TokenInspector({
 
       {/* Feedback message */}
       {message && (
-        <p className="mt-2 text-xs text-emerald-700">{message}</p>
+        <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">{message}</p>
       )}
     </div>
   );

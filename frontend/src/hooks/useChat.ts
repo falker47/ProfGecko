@@ -1,22 +1,16 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { streamChat, submitFeedback as apiFeedback } from "@/lib/api";
-import { ANONYMOUS_LIMIT, WELCOME_MESSAGE } from "@/lib/constants";
+import { ANONYMOUS_LIMIT } from "@/lib/constants";
 import type { Message } from "@/lib/types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const ANON_COUNT_KEY = "profgallade_anon_count";
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 11);
 }
-
-const welcomeMessage: Message = {
-  id: "welcome",
-  role: "assistant",
-  content: WELCOME_MESSAGE,
-  timestamp: new Date(),
-};
 
 function getAnonCount(): number {
   try {
@@ -37,12 +31,35 @@ function incrementAnonCount(): number {
 }
 
 export function useChat(authToken?: string | null) {
-  const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
+  const { locale, t } = useLanguage();
+
+  // Welcome message reactive to language
+  const welcomeMsg = useMemo<Message>(
+    () => ({
+      id: "welcome",
+      role: "assistant",
+      content: t.welcomeMessage,
+      timestamp: new Date(),
+    }),
+    [t.welcomeMessage],
+  );
+
+  const [messages, setMessages] = useState<Message[]>([welcomeMsg]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creditsExhausted, setCreditsExhausted] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const abortRef = useRef(false);
+
+  // When locale changes and we're still on the welcome screen, update the message
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === "welcome") {
+        return [welcomeMsg];
+      }
+      return prev;
+    });
+  }, [locale, welcomeMsg]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -93,6 +110,7 @@ export function useChat(authToken?: string | null) {
         message: text.trim(),
         history,
         authToken,
+        translations: t,
         // onToken
         onToken: (token) => {
           if (abortRef.current) return;
@@ -128,15 +146,15 @@ export function useChat(authToken?: string | null) {
         },
       });
     },
-    [isLoading, messages, authToken],
+    [isLoading, messages, authToken, t],
   );
 
   const clearChat = useCallback(() => {
-    setMessages([welcomeMessage]);
+    setMessages([welcomeMsg]);
     setError(null);
     setCreditsExhausted(false);
     setShowLoginPrompt(false);
-  }, []);
+  }, [welcomeMsg]);
 
   const dismissLoginPrompt = useCallback(() => {
     setShowLoginPrompt(false);

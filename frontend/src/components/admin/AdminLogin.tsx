@@ -34,19 +34,19 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg dark:bg-gray-900">
         <div className="mb-8 text-center">
           <div className="mb-2 text-4xl">🗡️</div>
-          <h1 className="text-2xl font-bold text-gray-900">Pannello Admin</h1>
-          <p className="mt-1 text-sm text-gray-500">Prof. Gallade</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pannello Admin</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Prof. Gallade</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
               htmlFor="secret"
-              className="mb-1 block text-sm font-medium text-gray-700"
+              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
               Chiave segreta
             </label>
@@ -56,13 +56,13 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
               placeholder="Inserisci la chiave segreta..."
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
               autoFocus
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
 
           <button

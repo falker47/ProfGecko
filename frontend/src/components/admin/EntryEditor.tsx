@@ -44,16 +44,16 @@ export default function EntryEditor({
 
   return (
     <div className="mt-3 space-y-3">
-      <label className="block text-xs font-medium text-gray-500 uppercase">
+      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
         Modifica risposta
       </label>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        className="w-full min-h-[200px] rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        className="w-full min-h-[200px] rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 font-mono text-sm text-gray-800 dark:text-gray-100 dark:bg-gray-800 dark:placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <div className="flex gap-2">
         <button
@@ -66,7 +66,7 @@ export default function EntryEditor({
         <button
           onClick={() => setText(entry.response)}
           disabled={!hasChanges}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Annulla
         </button>

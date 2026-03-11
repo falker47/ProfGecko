@@ -52,22 +52,22 @@ export default function DebugTool({ secret, onAuthFailed }: DebugToolProps) {
   ] as const;
 
   return (
-    <div className="rounded-xl bg-white shadow-sm">
+    <div className="rounded-xl bg-white dark:bg-gray-900 shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           🔍 Strumento Debug Hash
         </span>
-        <span className="text-gray-400">{isOpen ? "▲" : "▼"}</span>
+        <span className="text-gray-400 dark:text-gray-500">{isOpen ? "▲" : "▼"}</span>
       </button>
 
       {isOpen && (
-        <div className="border-t border-gray-200 px-4 py-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
           <form onSubmit={handleAnalyze} className="flex flex-wrap items-end gap-3">
             <div className="min-w-[250px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
                 Domanda
               </label>
               <input
@@ -75,18 +75,18 @@ export default function DebugTool({ secret, onAuthFailed }: DebugToolProps) {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="es. debolezze garchomp gen 4"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-100 dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
                 Gen
               </label>
               <select
                 value={generation}
                 onChange={(e) => setGeneration(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-100 dark:bg-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
                 {Array.from({ length: 9 }, (_, i) => i + 1).map((g) => (
                   <option key={g} value={g}>{g}</option>
@@ -103,27 +103,27 @@ export default function DebugTool({ secret, onAuthFailed }: DebugToolProps) {
             </button>
           </form>
 
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           {result && (
             <div className="mt-4 space-y-3">
               <div className="flex flex-wrap gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Exact hash: </span>
-                  <code className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
+                  <span className="text-gray-500 dark:text-gray-400">Exact hash: </span>
+                  <code className="rounded bg-gray-100 dark:bg-gray-800 px-2 py-0.5 font-mono text-xs">
                     {result.exact_hash}
                   </code>
                 </div>
                 <div>
-                  <span className="text-gray-500">Normal hash: </span>
-                  <code className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
+                  <span className="text-gray-500 dark:text-gray-400">Normal hash: </span>
+                  <code className="rounded bg-gray-100 dark:bg-gray-800 px-2 py-0.5 font-mono text-xs">
                     {result.normal_hash}
                   </code>
                 </div>
               </div>
 
-              <div className="rounded-lg bg-gray-50 p-3">
-                <p className="mb-2 text-xs font-medium text-gray-500 uppercase">
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-950 p-3">
+                <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Pipeline di normalizzazione
                 </p>
                 <dl className="space-y-1.5 text-sm">
@@ -136,8 +136,8 @@ export default function DebugTool({ secret, onAuthFailed }: DebugToolProps) {
                       : value || "—";
                     return (
                       <div key={key} className="flex gap-2">
-                        <dt className="w-44 shrink-0 text-gray-500">{label}:</dt>
-                        <dd className="font-mono text-gray-800">{display}</dd>
+                        <dt className="w-44 shrink-0 text-gray-500 dark:text-gray-400">{label}:</dt>
+                        <dd className="font-mono text-gray-800 dark:text-gray-200">{display}</dd>
                       </div>
                     );
                   })}

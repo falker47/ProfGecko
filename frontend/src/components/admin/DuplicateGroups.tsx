@@ -102,15 +102,15 @@ function GroupCard({
   const best = bestEntryId();
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
       {/* Group header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
       >
-        <span className="text-gray-400">{expanded ? "\u25BC" : "\u25B6"}</span>
+        <span className="text-gray-400 dark:text-gray-500">{expanded ? "\u25BC" : "\u25B6"}</span>
 
-        <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs font-mono text-indigo-700">
+        <span className="rounded bg-indigo-100 dark:bg-indigo-900 px-2 py-0.5 text-xs font-mono text-indigo-700 dark:text-indigo-300">
           Gen {group.generation}
         </span>
 
@@ -118,25 +118,25 @@ function GroupCard({
           {group.final_tokens.map((token) => (
             <span
               key={token}
-              className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-600"
+              className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-mono text-gray-600 dark:text-gray-400"
             >
               {token}
             </span>
           ))}
         </span>
 
-        <span className="ml-auto rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+        <span className="ml-auto rounded-full bg-red-100 dark:bg-red-900 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
           {group.entries.length} entry
         </span>
       </button>
 
       {/* Expanded entries */}
       {expanded && (
-        <div className="border-t border-gray-200">
+        <div className="border-t border-gray-200 dark:border-gray-700">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs font-medium uppercase text-gray-400">
+                <tr className="border-b border-gray-100 dark:border-gray-800 text-xs font-medium uppercase text-gray-400 dark:text-gray-500">
                   <th className="px-3 py-2">ID</th>
                   <th className="px-3 py-2">Domanda</th>
                   <th className="px-3 py-2 text-center">Hit</th>
@@ -152,9 +152,9 @@ function GroupCard({
                   return (
                     <tr
                       key={entry.id}
-                      className={`border-b border-gray-50 ${isBest ? "bg-emerald-50/50" : ""}`}
+                      className={`border-b border-gray-50 dark:border-gray-800 ${isBest ? "bg-emerald-50/50 dark:bg-emerald-950/50" : ""}`}
                     >
-                      <td className="px-3 py-2 text-xs text-gray-400">
+                      <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
                         {entry.id}
                         {isBest && (
                           <span
@@ -165,10 +165,10 @@ function GroupCard({
                           </span>
                         )}
                       </td>
-                      <td className="max-w-[350px] px-3 py-2 text-gray-800">
+                      <td className="max-w-[350px] px-3 py-2 text-gray-800 dark:text-gray-200">
                         {entry.question}
                       </td>
-                      <td className="px-3 py-2 text-center text-gray-600">
+                      <td className="px-3 py-2 text-center text-gray-600 dark:text-gray-400">
                         {entry.hit_count}
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -177,7 +177,7 @@ function GroupCard({
                             \u2713
                           </span>
                         ) : (
-                          <span className="text-gray-300" title="Non revisionata">
+                          <span className="text-gray-300 dark:text-gray-600" title="Non revisionata">
                             \u2717
                           </span>
                         )}
@@ -199,19 +199,19 @@ function GroupCard({
                           </span>
                         )}
                         {entry.feedback === "-" && (
-                          <span className="text-gray-300" title="Nessun feedback">
+                          <span className="text-gray-300 dark:text-gray-600" title="Nessun feedback">
                             \u2014
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs text-gray-400">
+                      <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
                         {formatDate(entry.created_at)}
                       </td>
                       <td className="px-3 py-2">
                         <button
                           onClick={() => handleDeleteOne(entry.id)}
                           disabled={deleting !== null || deletingAll}
-                          className="rounded bg-red-50 px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                          className="rounded bg-red-50 dark:bg-red-950 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-red-900 disabled:opacity-50"
                           title="Elimina entry"
                         >
                           {deleting === entry.id ? "..." : "\u2715"}
@@ -225,7 +225,7 @@ function GroupCard({
           </div>
 
           {/* Bulk action */}
-          <div className="flex items-center gap-3 border-t border-gray-100 px-4 py-3">
+          <div className="flex items-center gap-3 border-t border-gray-100 dark:border-gray-800 px-4 py-3">
             <button
               onClick={handleKeepBest}
               disabled={deletingAll || deleting !== null}
@@ -235,7 +235,7 @@ function GroupCard({
                 ? "Eliminazione..."
                 : `Tieni #${best}, elimina ${group.entries.length - 1} ${group.entries.length - 1 === 1 ? "copia" : "copie"}`}
             </button>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               Hash:{" "}
               <code className="font-mono">
                 {group.normal_hash.slice(0, 12)}...
@@ -293,30 +293,30 @@ export default function DuplicateGroups({
   const totalPages = data ? Math.ceil(data.total_groups / 20) : 1;
 
   return (
-    <div className="rounded-xl bg-white shadow-sm">
+    <div className="rounded-xl bg-white dark:bg-gray-900 shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {"\uD83D\uDD04"} Gruppi duplicati
           {data && data.total_groups > 0 && (
-            <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+            <span className="ml-2 rounded-full bg-red-100 dark:bg-red-900 px-2 py-0.5 text-xs text-red-700 dark:text-red-400">
               {data.total_groups}
             </span>
           )}
         </span>
-        <span className="text-gray-400">{isOpen ? "\u25B2" : "\u25BC"}</span>
+        <span className="text-gray-400 dark:text-gray-500">{isOpen ? "\u25B2" : "\u25BC"}</span>
       </button>
 
       {isOpen && (
-        <div className="border-t border-gray-200 px-4 py-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
           {error ? (
-            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg bg-red-50 dark:bg-red-950 px-4 py-3 text-sm text-red-700 dark:text-red-400">
               Errore: {error}
             </div>
           ) : loading && !data ? (
-            <p className="py-6 text-center text-sm text-gray-400">
+            <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
               Caricamento...
             </p>
           ) : data && data.groups.length > 0 ? (
@@ -337,31 +337,31 @@ export default function DuplicateGroups({
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
-                    className="rounded border border-gray-300 px-3 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-40"
+                    className="rounded border border-gray-300 dark:border-gray-600 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40"
                   >
                     \u25C0 Prec.
                   </button>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     Pagina {page} di {totalPages}
                   </span>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
-                    className="rounded border border-gray-300 px-3 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-40"
+                    className="rounded border border-gray-300 dark:border-gray-600 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40"
                   >
                     Succ. \u25B6
                   </button>
                 </div>
               )}
 
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 {data.total_groups}{" "}
                 {data.total_groups === 1 ? "gruppo" : "gruppi"} con hash
                 duplicato
               </p>
             </div>
           ) : (
-            <div className="py-6 text-center text-sm text-gray-400">
+            <div className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
               <p>Nessun duplicato trovato</p>
             </div>
           )}

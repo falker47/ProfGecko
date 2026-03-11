@@ -82,29 +82,29 @@ export default function EntryRow({
       <tr
         onClick={onToggle}
         className={clsx(
-          "cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50",
+          "cursor-pointer border-b border-gray-100 dark:border-gray-800 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800",
           entry.reviewed && "border-l-4 border-l-emerald-400",
-          expanded && "bg-emerald-50/50",
+          expanded && "bg-emerald-50/50 dark:bg-emerald-950/50",
         )}
       >
-        <td className="px-3 py-2.5 text-xs text-gray-400">{entry.id}</td>
-        <td className="max-w-[250px] px-3 py-2.5 text-sm text-gray-800">
+        <td className="px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500">{entry.id}</td>
+        <td className="max-w-[250px] px-3 py-2.5 text-sm text-gray-800 dark:text-gray-200">
           {truncate(entry.question, 50)}
         </td>
-        <td className="px-3 py-2.5 text-center text-sm text-gray-600">
+        <td className="px-3 py-2.5 text-center text-sm text-gray-600 dark:text-gray-400">
           {entry.generation}
         </td>
-        <td className="max-w-[300px] px-3 py-2.5 text-sm text-gray-600">
+        <td className="max-w-[300px] px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400">
           {truncate(entry.response, 60)}
         </td>
-        <td className="px-3 py-2.5 text-center text-sm text-gray-600">
+        <td className="px-3 py-2.5 text-center text-sm text-gray-600 dark:text-gray-400">
           {entry.hit_count}
         </td>
         <td className="px-3 py-2.5 text-center">
           {entry.reviewed ? (
             <span className="text-emerald-600" title="Revisionata">✓</span>
           ) : (
-            <span className="text-gray-300" title="Non revisionata">✗</span>
+            <span className="text-gray-300 dark:text-gray-600" title="Non revisionata">✗</span>
           )}
         </td>
         <td className="px-3 py-2.5 text-center">
@@ -118,10 +118,10 @@ export default function EntryRow({
             <span className="text-amber-500" title="Missing (auto)">⚠</span>
           )}
           {entry.feedback === "-" && (
-            <span className="text-gray-300" title="Nessun feedback">—</span>
+            <span className="text-gray-300 dark:text-gray-600" title="Nessun feedback">—</span>
           )}
         </td>
-        <td className="px-3 py-2.5 text-xs text-gray-400">
+        <td className="px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500">
           {formatDate(entry.created_at)}
         </td>
         <td className="px-3 py-2.5">
@@ -130,7 +130,7 @@ export default function EntryRow({
               <button
                 onClick={handleApprove}
                 disabled={approving}
-                className="rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-200 disabled:opacity-50"
+                className="rounded bg-emerald-100 dark:bg-emerald-900 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 transition-colors hover:bg-emerald-200 dark:hover:bg-emerald-800 disabled:opacity-50"
               >
                 {approving ? "..." : "Approva"}
               </button>
@@ -138,7 +138,7 @@ export default function EntryRow({
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="rounded bg-red-50 px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+              className="rounded bg-red-50 dark:bg-red-950 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-red-900 disabled:opacity-50"
               title="Elimina entry"
             >
               {deleting ? "..." : "✕"}
@@ -149,23 +149,23 @@ export default function EntryRow({
 
       {/* Riga espansa */}
       {expanded && (
-        <tr className="border-b border-gray-200 bg-gray-50/80">
+        <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-950/80">
           <td colSpan={9} className="px-4 py-4">
             <div className="space-y-4">
               {/* Domanda completa */}
               <div>
-                <p className="mb-1 text-xs font-medium text-gray-500 uppercase">
+                <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Domanda
                 </p>
-                <p className="text-sm text-gray-800">{entry.question}</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200">{entry.question}</p>
               </div>
 
               {/* Risposta completa (markdown) */}
               <div>
-                <p className="mb-1 text-xs font-medium text-gray-500 uppercase">
+                <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Risposta attuale
                 </p>
-                <div className="rounded-lg bg-white p-3 text-sm text-gray-800 prose prose-sm max-w-none">
+                <div className="rounded-lg bg-white dark:bg-gray-900 p-3 text-sm text-gray-800 dark:text-gray-200 prose prose-sm dark:prose-invert max-w-none">
                   <ReactMarkdown>{entry.response}</ReactMarkdown>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default function EntryRow({
               />
 
               {/* Metadati */}
-              <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-400">
+              <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-400 dark:text-gray-500">
                 <span>Exact hash: <code className="font-mono">{entry.exact_hash}</code></span>
                 <span>Normal hash: <code className="font-mono">{entry.normal_hash}</code></span>
                 <span>Creata: {formatDate(entry.created_at)}</span>

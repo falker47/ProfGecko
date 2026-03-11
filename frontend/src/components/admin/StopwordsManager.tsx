@@ -89,24 +89,24 @@ export default function StopwordsManager({
   }
 
   return (
-    <div className="rounded-xl bg-white shadow-sm">
+    <div className="rounded-xl bg-white dark:bg-gray-900 shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           🛑 Stopword personalizzate
           {words.length > 0 && (
-            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+            <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-900 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-300">
               {words.length}
             </span>
           )}
         </span>
-        <span className="text-gray-400">{isOpen ? "▲" : "▼"}</span>
+        <span className="text-gray-400 dark:text-gray-500">{isOpen ? "▲" : "▼"}</span>
       </button>
 
       {isOpen && (
-        <div className="border-t border-gray-200 px-4 py-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
           {/* Add form */}
           <form onSubmit={handleAdd} className="mb-4 flex gap-2">
             <input
@@ -114,7 +114,7 @@ export default function StopwordsManager({
               value={newWord}
               onChange={(e) => setNewWord(e.target.value)}
               placeholder="Aggiungi stopword..."
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-100 dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             />
             <button
               type="submit"
@@ -131,7 +131,7 @@ export default function StopwordsManager({
               {words.map((word) => (
                 <span
                   key={word}
-                  className="group flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm text-amber-800"
+                  className="group flex items-center gap-1 rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 px-3 py-1 text-sm text-amber-800 dark:text-amber-200"
                 >
                   <span className="font-mono">{word}</span>
                   <button
@@ -146,7 +146,7 @@ export default function StopwordsManager({
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 dark:text-gray-500">
               Nessuna stopword personalizzata. Aggiungi parole qui o clicca i
               token nelle righe della tabella.
             </p>
@@ -154,7 +154,7 @@ export default function StopwordsManager({
 
           {/* Feedback */}
           {message && (
-            <p className="mt-3 rounded-lg bg-gray-800 px-3 py-1.5 text-sm text-white">
+            <p className="mt-3 rounded-lg bg-gray-800 dark:bg-gray-700 px-3 py-1.5 text-sm text-white">
               {message}
             </p>
           )}

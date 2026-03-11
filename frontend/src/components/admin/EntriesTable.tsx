@@ -51,13 +51,13 @@ function SortableTh({
   const isActive = currentSort === column;
   return (
     <th
-      className={`px-3 py-2.5 select-none cursor-pointer hover:text-emerald-600 transition-colors ${className}`}
+      className={`px-3 py-2.5 select-none cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors ${className}`}
       onClick={() => onSort(column)}
       title={`Ordina per ${label}`}
     >
       <span className="inline-flex items-center gap-1">
         {label}
-        <span className={`text-[10px] ${isActive ? "text-emerald-600" : "text-gray-300"}`}>
+        <span className={`text-[10px] ${isActive ? "text-emerald-600 dark:text-emerald-400" : "text-gray-300 dark:text-gray-600"}`}>
           {isActive ? (currentOrder === "asc" ? "\u25B2" : "\u25BC") : "\u25B4\u25BE"}
         </span>
       </span>
@@ -119,13 +119,13 @@ export default function EntriesTable({
   }
 
   return (
-    <div className="rounded-xl bg-white shadow-sm">
+    <div className="rounded-xl bg-white dark:bg-gray-900 shadow-sm">
       <EntriesFilterBar filters={filters} onChange={setFilters} />
 
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-gray-200 text-xs font-medium uppercase text-gray-500">
+            <tr className="border-b border-gray-200 dark:border-gray-700 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
               <SortableTh
                 label="ID"
                 column="id"
@@ -166,7 +166,7 @@ export default function EntriesTable({
           <tbody>
             {loading && !data ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-sm text-gray-400">
+                <td colSpan={9} className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">
                   Caricamento...
                 </td>
               </tr>
@@ -186,7 +186,7 @@ export default function EntriesTable({
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-sm text-gray-400">
+                <td colSpan={9} className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">
                   Nessuna voce trovata
                 </td>
               </tr>
@@ -204,7 +204,7 @@ export default function EntriesTable({
       )}
 
       {data && (
-        <div className="border-t border-gray-100 px-4 py-2 text-xs text-gray-400">
+        <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-2 text-xs text-gray-400 dark:text-gray-500">
           {data.total} {data.total === 1 ? "voce" : "voci"} totali
         </div>
       )}

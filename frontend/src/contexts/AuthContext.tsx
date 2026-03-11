@@ -10,6 +10,7 @@ import {
 import { getCredits, getMe, loginWithGoogle } from "@/lib/auth-api";
 import { GOOGLE_CLIENT_ID } from "@/lib/constants";
 import type { CreditBalance, User } from "@/lib/types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /* ------------------------------------------------------------------ */
 /*  Google Identity Services type declarations                        */
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [gisReady, setGisReady] = useState(false);
+  const { t } = useLanguage();
 
   // --- Handle Google login response ---
   const handleGoogleResponse = useCallback(
@@ -172,11 +174,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           theme: "outline",
           size: "medium",
           text: "signin_with",
-          locale: "it",
+          locale: t.googleButtonLocale,
         });
       }
     },
-    [gisReady],
+    [gisReady, t.googleButtonLocale],
   );
 
   // --- Update credits from SSE done event ---

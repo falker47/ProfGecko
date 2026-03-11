@@ -53,9 +53,9 @@ export default function AdminDashboard({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-emerald-700 shadow-md">
+      <header className="bg-emerald-700 shadow-md dark:bg-emerald-900">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <span className="text-xl">🗡️</span>

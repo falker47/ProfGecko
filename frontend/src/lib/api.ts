@@ -1,10 +1,12 @@
 import { API_BASE_URL, MAX_HISTORY_MESSAGES } from "./constants";
 import type { CreditBalance, Message } from "./types";
+import type { Translations } from "./i18n";
 
 export interface StreamChatOptions {
   message: string;
   history: Message[];
   authToken?: string | null;
+  translations: Translations;
   onToken: (token: string) => void;
   onDone: (generationUsed?: number, entryId?: number) => void;
   onError: (error: string) => void;
@@ -12,7 +14,7 @@ export interface StreamChatOptions {
 }
 
 export async function streamChat(opts: StreamChatOptions): Promise<void> {
-  const { message, history, authToken, onToken, onDone, onError, onCreditsExhausted } = opts;
+  const { message, history, authToken, translations, onToken, onDone, onError, onCreditsExhausted } = opts;
 
   const chatHistory = history.slice(-MAX_HISTORY_MESSAGES).map((m) => ({
     role: m.role,
@@ -34,24 +36,24 @@ export async function streamChat(opts: StreamChatOptions): Promise<void> {
       body: JSON.stringify({ message, chat_history: chatHistory }),
     });
   } catch {
-    onError("Impossibile connettersi al server. Verifica che il backend sia avviato.");
+    onError(translations.errorConnection);
     return;
   }
 
   if (response.status === 402) {
     onCreditsExhausted?.();
-    onError("Hai esaurito i crediti! I crediti gratuiti si resettano a mezzanotte.");
+    onError(translations.errorCreditsExhausted);
     return;
   }
 
   if (!response.ok) {
-    onError(`Errore dal server: ${response.status}`);
+    onError(translations.errorServer(response.status));
     return;
   }
 
   const reader = response.body?.getReader();
   if (!reader) {
-    onError("Streaming non supportato dal browser.");
+    onError(translations.errorStreamingUnsupported);
     return;
   }
 
@@ -83,7 +85,7 @@ export async function streamChat(opts: StreamChatOptions): Promise<void> {
           try {
             const data = JSON.parse(dataStr);
             if ("error" in data) {
-              onError(data.error || "Errore interno del server.");
+              onError(data.error || translations.errorInternalServer);
               return;
             } else if ("token" in data) {
               onToken(data.token);

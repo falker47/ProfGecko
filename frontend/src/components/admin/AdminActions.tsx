@@ -249,7 +249,7 @@ export default function AdminActions({
         {reloading ? "Ricaricamento..." : "⟳ Ricarica Vectorstore"}
       </button>
 
-      <div className="h-6 w-px bg-gray-300" />
+      <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
 
       <button
         onClick={handleInvalidate}
@@ -296,7 +296,7 @@ export default function AdminActions({
       </label>
 
       {message && (
-        <span className="rounded-lg bg-gray-800 px-3 py-1.5 text-sm text-white">
+        <span className="rounded-lg bg-gray-800 dark:bg-gray-700 px-3 py-1.5 text-sm text-white">
           {message}
         </span>
       )}

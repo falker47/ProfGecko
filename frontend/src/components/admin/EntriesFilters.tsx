@@ -25,14 +25,14 @@ export default function EntriesFilters({ filters, onChange }: EntriesFiltersProp
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 px-4 py-3">
+    <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
       {/* Generazione */}
       <select
         value={filters.generation ?? ""}
         onChange={(e) =>
           update({ generation: e.target.value ? Number(e.target.value) : null })
         }
-        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       >
         <option value="">Tutte le gen</option>
         {Array.from({ length: 9 }, (_, i) => i + 1).map((g) => (
@@ -49,7 +49,7 @@ export default function EntriesFilters({ filters, onChange }: EntriesFiltersProp
           const v = e.target.value;
           update({ reviewed: v === "" ? null : v === "true" });
         }}
-        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       >
         <option value="">Tutti</option>
         <option value="true">Revisionate</option>
@@ -62,7 +62,7 @@ export default function EntriesFilters({ filters, onChange }: EntriesFiltersProp
         onChange={(e) =>
           update({ feedback: e.target.value || null })
         }
-        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       >
         <option value="">Tutti i FB</option>
         <option value="V">✓ Corretta</option>
@@ -77,7 +77,7 @@ export default function EntriesFilters({ filters, onChange }: EntriesFiltersProp
         value={searchInput}
         onChange={(e) => handleSearchChange(e.target.value)}
         placeholder="Cerca nella domanda..."
-        className="min-w-[200px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        className="min-w-[200px] flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-100 dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
       />
     </div>
   );

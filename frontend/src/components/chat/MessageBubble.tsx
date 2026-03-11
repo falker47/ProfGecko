@@ -1,7 +1,10 @@
+"use client";
+
 import clsx from "clsx";
 import Image from "next/image";
 import Markdown from "react-markdown";
 import type { Message } from "@/lib/types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MessageBubbleProps {
   message: Message;
@@ -9,6 +12,7 @@ interface MessageBubbleProps {
 }
 
 export default function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
+  const { t } = useLanguage();
   const isUser = message.role === "user";
 
   // Hide empty assistant placeholder — the TypingIndicator handles this state
@@ -25,7 +29,7 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
         {/* Avatar */}
         {isUser ? (
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm text-white">
-            Tu
+            {t.you}
           </div>
         ) : (
           <Image
@@ -43,13 +47,13 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
             "max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed",
             isUser
               ? "bg-emerald-600 text-white"
-              : "bg-white text-gray-800 shadow-sm ring-1 ring-gray-100",
+              : "bg-white text-gray-800 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700",
           )}
         >
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : (
-            <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-headings:my-2 prose-table:my-2 prose-hr:my-2 prose-strong:font-semibold">
+            <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0 prose-headings:my-2 prose-table:my-2 prose-hr:my-2 prose-strong:font-semibold dark:prose-invert">
               <Markdown>{message.content || "..."}</Markdown>
             </div>
           )}
@@ -65,10 +69,10 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
               "flex items-center gap-1 text-xs transition-colors",
               message.feedback === "V"
                 ? "text-emerald-600 font-medium"
-                : "text-gray-400 hover:text-emerald-500",
+                : "text-gray-400 hover:text-emerald-500 dark:text-gray-500",
             )}
           >
-            <span className="text-sm">&#10003;</span> Corretta
+            <span className="text-sm">&#10003;</span> {t.feedbackCorrect}
           </button>
           <button
             onClick={() => onFeedback?.(message.id, "F")}
@@ -76,10 +80,10 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
               "flex items-center gap-1 text-xs transition-colors",
               message.feedback === "F"
                 ? "text-red-500 font-medium"
-                : "text-gray-400 hover:text-red-400",
+                : "text-gray-400 hover:text-red-400 dark:text-gray-500",
             )}
           >
-            <span className="text-sm">&#10007;</span> Errata
+            <span className="text-sm">&#10007;</span> {t.feedbackWrong}
           </button>
         </div>
       )}

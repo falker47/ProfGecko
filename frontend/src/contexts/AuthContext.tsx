@@ -49,7 +49,7 @@ declare global {
 /*  Context                                                           */
 /* ------------------------------------------------------------------ */
 
-const TOKEN_KEY = "profgallade_jwt";
+const TOKEN_KEY = "profgecko_jwt";
 
 interface AuthContextType {
   user: User | null;

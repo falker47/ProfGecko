@@ -11,7 +11,7 @@ import type { Locale, Translations } from "@/lib/i18n";
 import { it } from "@/lib/i18n";
 import { en } from "@/lib/i18n";
 
-const LANG_KEY = "profgallade_lang";
+const LANG_KEY = "profgecko_lang";
 const dictionaries: Record<Locale, Translations> = { it, en };
 
 interface LanguageContextType {

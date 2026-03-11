@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     jwt_expiry_hours: int = 168  # 7 days
 
     # Database
-    db_path: str = "data/profgallade.db"
+    db_path: str = "data/profgecko.db"
 
     # Credits
     daily_free_credits: int = 10

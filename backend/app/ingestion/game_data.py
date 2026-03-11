@@ -10,11 +10,7 @@ Sources:
 
 from __future__ import annotations
 
-from app.ingestion.translations import TYPE_EN_TO_IT
-
-
-def _t(en: str) -> str:
-    return TYPE_EN_TO_IT.get(en, en)
+from app.ingestion.translations import translate_type as _t
 
 
 # ── Game static data ─────────────────────────────────────────────

@@ -10,7 +10,7 @@ import {
 
 export type Theme = "light" | "dark";
 
-const THEME_KEY = "profgallade_theme";
+const THEME_KEY = "profgecko_theme";
 
 interface ThemeContextType {
   theme: Theme;

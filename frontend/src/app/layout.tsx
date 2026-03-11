@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Prof. Gallade - Esperto Pokemon",
+  title: "Prof. Gecko - Esperto Pokemon",
   description: "Chatbot AI esperto di Pokemon. Chiedi qualsiasi cosa su tipi, statistiche, evoluzioni e mosse!",
 };
 

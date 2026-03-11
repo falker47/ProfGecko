@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
-const ADMIN_SECRET_KEY = "profgallade_admin_secret";
+const ADMIN_SECRET_KEY = "profgecko_admin_secret";
 
 export default function AdminPage() {
   const [secret, setSecret] = useState<string | null>(null);

@@ -33,8 +33,8 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
           </div>
         ) : (
           <Image
-            src="/profgallade-avatar.jpg"
-            alt="Prof. Gallade"
+            src="/Prof.Gecko.png"
+            alt="Prof. Gecko"
             width={32}
             height={32}
             className="h-8 w-8 shrink-0 rounded-full"

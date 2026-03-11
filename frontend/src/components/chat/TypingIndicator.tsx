@@ -4,8 +4,8 @@ export default function TypingIndicator() {
   return (
     <div className="flex animate-[fade-in_0.3s_ease-out] items-start gap-2 px-4 py-2">
       <Image
-        src="/profgallade-avatar.jpg"
-        alt="Prof. Gallade"
+        src="/Prof.Gecko.png"
+        alt="Prof. Gecko"
         width={32}
         height={32}
         className="h-8 w-8 shrink-0 rounded-full"

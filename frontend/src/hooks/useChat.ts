@@ -6,7 +6,7 @@ import { ANONYMOUS_LIMIT } from "@/lib/constants";
 import type { Message } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const ANON_COUNT_KEY = "profgallade_anon_count";
+const ANON_COUNT_KEY = "profgecko_anon_count";
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 11);

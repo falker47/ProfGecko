@@ -2,12 +2,12 @@ import type { Translations } from "./types";
 
 export const it: Translations = {
   // -- Layout / Header --
-  siteTitle: "Prof. Gallade",
+  siteTitle: "Prof. Gecko",
   siteSubtitle: "Il tuo esperto Pokemon",
 
   // -- Welcome screen --
   welcomeMessage:
-    "Ciao! Sono il Prof. Gallade, il tuo assistente personale sul mondo dei Pokemon. " +
+    "Ciao! Sono il Prof. Gecko, il tuo assistente personale sul mondo dei Pokemon. " +
     "Chiedimi tutto quello che vuoi: tipi, mosse, statistiche, evoluzioni, strategie " +
     "e curiosità da qualsiasi generazione!",
   suggestedQuestions: [
@@ -64,7 +64,7 @@ export const it: Translations = {
   // -- Login prompt --
   loginPromptBold: "10 crediti gratuiti",
   loginPromptText: (boldPart) =>
-    `Ti piace Prof. Gallade? Accedi per ottenere ${boldPart} ogni giorno!`,
+    `Ti piace Prof. Gecko? Accedi per ottenere ${boldPart} ogni giorno!`,
 
   // -- API / streaming errors --
   errorConnection:

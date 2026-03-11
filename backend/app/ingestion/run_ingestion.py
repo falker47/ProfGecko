@@ -90,7 +90,7 @@ async def main(max_id: int, force: bool, generations: list[int]):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Prof. Gallade - Data Ingestion")
+    parser = argparse.ArgumentParser(description="Prof. Gecko - Data Ingestion")
     parser.add_argument(
         "--max-id", type=int, default=1025,
         help="Max Pokemon ID to fetch (default: 1025)",

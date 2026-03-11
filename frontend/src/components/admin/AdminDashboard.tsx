@@ -48,7 +48,7 @@ export default function AdminDashboard({
   }
 
   function handleLogout() {
-    sessionStorage.removeItem("profgallade_admin_secret");
+    sessionStorage.removeItem("profgecko_admin_secret");
     onAuthFailed();
   }
 

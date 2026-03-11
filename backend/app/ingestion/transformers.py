@@ -17,6 +17,7 @@ from app.ingestion.translations import (
     VARIANT_REGION_TO_GEN,
     VERSION_NAME_IT,
     VERSION_TO_GEN,
+    build_name_substitution_patterns,
     build_pokemon_name_lookup,
     substitute_pokemon_names_in_text,
     translate_pokemon_name,
@@ -2408,6 +2409,7 @@ def build_game_data_documents(
     generation: int,
     *,
     pokemon_name_it: dict[str, str] | None = None,
+    name_sub_patterns: list | None = None,
 ) -> list[Document]:
     """Build documents for starters, version exclusives and legendaries.
 
@@ -2517,8 +2519,8 @@ def build_game_data_documents(
                 _tr(s["name"]) for s in data.get("starters", [])
             )
             best_starter_text = substitute_pokemon_names_in_text(
-                best_starter, pokemon_name_it,
-            ) if pokemon_name_it else best_starter
+                best_starter, name_sub_patterns,
+            ) if name_sub_patterns else best_starter
             text = (
                 f"Miglior starter in {game_it} "
                 f"(Generazione {generation}, regione {region}):\n"
@@ -2541,8 +2543,8 @@ def build_game_data_documents(
         best_team = data.get("best_team")
         if best_team:
             best_team_text = substitute_pokemon_names_in_text(
-                best_team, pokemon_name_it,
-            ) if pokemon_name_it else best_team
+                best_team, name_sub_patterns,
+            ) if name_sub_patterns else best_team
             text = (
                 f"Miglior squadra consigliata per {game_it} "
                 f"(Generazione {generation}, regione {region}):\n\n"
@@ -2863,6 +2865,7 @@ def build_all_documents_for_generation(
     type_name_it = _build_type_name_lookup(all_data["types"])
     type_table = _build_type_effectiveness_table(all_data["types"], generation)
     pokemon_name_it = build_pokemon_name_lookup(all_data["species"])
+    name_sub_patterns = build_name_substitution_patterns(pokemon_name_it)
 
     docs.extend(build_pokemon_documents(
         all_data["pokemon"],
@@ -2945,7 +2948,11 @@ def build_all_documents_for_generation(
 
     docs.extend(build_trainer_documents(generation, pokemon_name_it=pokemon_name_it))
 
-    docs.extend(build_game_data_documents(generation, pokemon_name_it=pokemon_name_it))
+    docs.extend(build_game_data_documents(
+        generation,
+        pokemon_name_it=pokemon_name_it,
+        name_sub_patterns=name_sub_patterns,
+    ))
 
     # Regional variants (if fetched)
     if all_data.get("regional_variants"):

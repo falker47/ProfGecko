@@ -23,13 +23,27 @@ TYPE_EN_TO_IT: dict[str, str] = {
 }
 
 
-# ── Regional form labels for display ─────────────────────────────
-_REGION_LABEL_IT: dict[str, str] = {
-    "alola": "di Alola",
-    "galar": "di Galar",
-    "hisui": "di Hisui",
-    "paldea": "di Paldea",
+def translate_type(en_type: str) -> str:
+    """Translate a type name EN → IT. Falls back to the English name.
+
+    Handles slash-separated compound types like ``"Grass/Fire/Water"``
+    by translating each part individually.
+    """
+    if "/" in en_type:
+        return "/".join(TYPE_EN_TO_IT.get(t.strip(), t.strip()) for t in en_type.split("/"))
+    return TYPE_EN_TO_IT.get(en_type, en_type)
+
+
+# ── Regional variant region slug to Italian display name ─────────
+REGION_NAME_IT: dict[str, str] = {
+    "alola": "Alola",
+    "galar": "Galar",
+    "hisui": "Hisui",
+    "paldea": "Paldea",
 }
+
+# Derived: "di Alola", "di Galar", etc. — used for regional form names
+_REGION_LABEL_IT: dict[str, str] = {k: f"di {v}" for k, v in REGION_NAME_IT.items()}
 
 _REGION_ADJ_EN: dict[str, str] = {
     "alola": "alolan",
@@ -143,31 +157,41 @@ def translate_pokemon_name(
     return name
 
 
+def build_name_substitution_patterns(
+    lookup: dict[str, str],
+) -> list[tuple[re.Pattern[str], str]]:
+    """Pre-compile regex patterns for names that differ EN → IT.
+
+    Returns a list of ``(compiled_pattern, it_name)`` tuples sorted
+    longest-first so that multi-word names (e.g. *Iron Valiant*) are
+    matched before shorter substrings.  Call this once per ingestion
+    run and pass the result to :func:`substitute_pokemon_names_in_text`.
+    """
+    patterns: list[tuple[re.Pattern[str], str]] = []
+    for en_lower in sorted(
+        (k for k, v in lookup.items() if k != v.lower()),
+        key=len,
+        reverse=True,
+    ):
+        regex = re.compile(
+            r"\b" + re.escape(en_lower) + r"\b",
+            flags=re.IGNORECASE,
+        )
+        patterns.append((regex, lookup[en_lower]))
+    return patterns
+
+
 def substitute_pokemon_names_in_text(
     text: str,
-    lookup: dict[str, str],
+    patterns: list[tuple[re.Pattern[str], str]],
 ) -> str:
     """Replace English Pokemon names in prose text with Italian names.
 
-    Only substitutes names that actually differ EN → IT.
-    Processes longer names first to prevent partial matches
-    (e.g. ``Iron Valiant`` before ``Iron``).
+    *patterns* should be the pre-compiled list returned by
+    :func:`build_name_substitution_patterns`.
     """
-    # Filter to only names that actually change
-    replacements: dict[str, str] = {}
-    for en_lower, it_name in lookup.items():
-        if en_lower != it_name.lower():
-            replacements[en_lower] = it_name
-
-    if not replacements:
-        return text
-
-    # Longest first to avoid partial matches
-    for en_lower in sorted(replacements, key=len, reverse=True):
-        it_name = replacements[en_lower]
-        pattern = r"\b" + re.escape(en_lower) + r"\b"
-        text = re.sub(pattern, it_name, text, flags=re.IGNORECASE)
-
+    for regex, it_name in patterns:
+        text = regex.sub(it_name, text)
     return text
 
 # Maps PokeAPI version slug to Italian name
@@ -219,13 +243,7 @@ VARIANT_REGION_TO_GEN: dict[str, int] = {
     "paldea": 9,
 }
 
-# Regional variant region slug to Italian display name
-REGION_NAME_IT: dict[str, str] = {
-    "alola": "Alola",
-    "galar": "Galar",
-    "hisui": "Hisui",
-    "paldea": "Paldea",
-}
+# REGION_NAME_IT is defined at the top of this file (used by _REGION_LABEL_IT)
 
 # PokeAPI encounter method slug to Italian label
 ENCOUNTER_METHOD_IT: dict[str, str] = {

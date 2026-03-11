@@ -10,7 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app.core.cache import ResponseCache
 from app.core.generation_mapper import LATEST_GENERATION, detect_game_slug, detect_generation
-from app.core.prompts import PROF_GALLADE_STRATEGIC_PROMPT, PROF_GALLADE_SYSTEM_PROMPT
+from app.core.prompts import PROF_GECKO_STRATEGIC_PROMPT, PROF_GECKO_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -350,13 +350,13 @@ class RAGChain:
         self.k = k
 
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", PROF_GALLADE_SYSTEM_PROMPT),
+            ("system", PROF_GECKO_SYSTEM_PROMPT),
             MessagesPlaceholder("chat_history"),
             ("human", "{question}"),
         ])
 
         self.strategic_prompt = ChatPromptTemplate.from_messages([
-            ("system", PROF_GALLADE_STRATEGIC_PROMPT),
+            ("system", PROF_GECKO_STRATEGIC_PROMPT),
             MessagesPlaceholder("chat_history"),
             ("human", "{question}"),
         ])

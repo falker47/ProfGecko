@@ -114,7 +114,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="Prof. Gallade API",
+        title="Prof. Gecko API",
         lifespan=lifespan,
     )
 

@@ -57,7 +57,7 @@ GAME_STATIC_DATA: dict[str, dict] = {
             "Una squadra bilanciata per Kanto:\n"
             "- Venusaur (Erba/Veleno) - starter, copre Acqua e Roccia\n"
             "- Alakazam (Psico) - devastante in Gen 1 dove Psico non ha veri counter\n"
-            "- Snorlax (Normale) - bulk enorme, Azione Corpo e Riposo\n"
+            "- Snorlax (Normale) - bulk enorme, Corposcontro e Riposo\n"
             "- Lapras (Acqua/Ghiaccio) - ottenuto gratis a Zafferanopoli, copre Drago e Volante\n"
             "- Jolteon (Elettro) - velocissimo, copre i tipi Acqua e Volante\n"
             "- Nidoking (Veleno/Terra) - movepool vastissimo, Terremoto e Gelopugno\n"
@@ -70,9 +70,9 @@ GAME_STATIC_DATA: dict[str, dict] = {
             {"name": "Zapdos", "type_it": f"{_t('Electric')}/{_t('Flying')}",
              "location": "Centrale Elettrica"},
             {"name": "Moltres", "type_it": f"{_t('Fire')}/{_t('Flying')}",
-             "location": "Strada Vittoria"},
+             "location": "Via Vittoria"},
             {"name": "Mewtwo", "type_it": _t("Psychic"),
-             "location": "Grotta Cerulean (dopo la Lega)"},
+             "location": "Grotta Celeste (dopo la Lega)"},
         ],
         "version_exclusives": {
             "Rosso": [
@@ -178,7 +178,7 @@ GAME_STATIC_DATA: dict[str, dict] = {
             "Una squadra bilanciata per Hoenn:\n"
             "- Swampert (Acqua/Terra) - starter, quasi nessuna debolezza pratica\n"
             "- Gardevoir (Psico/Folletto in remake, Psico in originali) - cattura Ralts nel Percorso 102\n"
-            "- Breloom (Erba/Lotta) - Sporcolpe + Semitraglia, cattura Shroomish nella Foresta di Petali\n"
+            "- Breloom (Erba/Lotta) - Spora + Semitraglia, cattura Shroomish nella Foresta di Petali\n"
             "- Flygon (Terra/Drago) - cattura Trapinch nel Deserto, ottima copertura\n"
             "- Aggron (Acciaio/Roccia) - cattura Aron nella Grotta Granito, tank fisico\n"
             "- Manectric (Elettro) - cattura Electrike sul Percorso 110, copre Acqua e Volante\n"
@@ -247,13 +247,13 @@ GAME_STATIC_DATA: dict[str, dict] = {
         "best_team": (
             "Una squadra bilanciata per Sinnoh:\n"
             "- Infernape (Fuoco/Lotta) - starter, Fuoco raro in Sinnoh\n"
-            "- Staraptor (Normale/Volante) - cattura Starly subito, Intimorisci + Baldeali\n"
-            "- Luxray (Elettro) - cattura Shinx presto, Prepotenza + Tuono Zanne\n"
+            "- Staraptor (Normale/Volante) - cattura Starly subito, Prepotenza + Zuffa\n"
+            "- Luxray (Elettro) - cattura Shinx presto, Prepotenza + Fulmindenti\n"
             "- Garchomp (Drago/Terra) - cattura Gible nella Grotta Nascosta, uno dei Pokemon piu' forti\n"
-            "- Lucario (Lotta/Acciaio) - uovo da Marisio nella citta' di Byron, ottima copertura\n"
+            "- Lucario (Lotta/Acciaio) - uovo da Marisio nella citta' di Ferruccio, ottima copertura\n"
             "- Gyarados (Acqua/Volante) o Floatzel (Acqua) - per Surf e copertura Acqua\n"
             "Alternative valide: Roserade (Veleno/Erba, forte speciale), Togekiss (con "
-            "Grazia Magica), Weavile (Buio/Ghiaccio), Gastrodon."
+            "Leggiadro), Weavile (Buio/Ghiaccio), Gastrodon."
         ),
         "legendaries": [
             {"name": "Dialga", "type_it": f"{_t('Steel')}/{_t('Dragon')}",
@@ -320,9 +320,9 @@ GAME_STATIC_DATA: dict[str, dict] = {
             "- Excadrill (Terra/Acciaio) - cattura Drilbur nelle grotte, veloce e potente\n"
             "- Krookodile (Terra/Buio) - cattura Sandile nel Deserto, Prepotenza + Terremoto\n"
             "- Reuniclus (Psico) - cattura Solosis (Bianco) o Gothita (Nero), ottimo speciale\n"
-            "- Archeops (Roccia/Volante) - dal fossile, Attacco e Velocita' altissimi (ma Abilita' Meno)\n"
-            "Alternative valide: Haxorus (Drago, Zanna Assiale devastante), Galvantula "
-            "(Coleottero/Elettro, Elettrointrappolamento), Chandelure (Spettro/Fuoco), Eelektross "
+            "- Archeops (Roccia/Volante) - dal fossile, Attacco e Velocita' altissimi (ma Abilita' Sconforto)\n"
+            "Alternative valide: Haxorus (Drago, Oltraggio devastante), Galvantula "
+            "(Coleottero/Elettro, Elettrotela), Chandelure (Spettro/Fuoco), Eelektross "
             "(Elettro, nessuna debolezza grazie a Levitazione)."
         ),
         "legendaries": [
@@ -390,7 +390,7 @@ GAME_STATIC_DATA: dict[str, dict] = {
             "- Lucario (Lotta/Acciaio) - ricevuto nella storia a Shalour, Mega Evoluzione\n"
             "- Aegislash (Acciaio/Spettro) - cattura Honedge nel Percorso 6, forma offensiva/difensiva unica\n"
             "- Sylveon (Folletto) - evolvi l'Eevee ricevuto, devastante contro i Draghi\n"
-            "- Talonflame (Fuoco/Volante) - cattura Fletchling subito, Ali Tronca prioritaria\n"
+            "- Talonflame (Fuoco/Volante) - cattura Fletchling subito, Aliraffica prioritaria\n"
             "Alternative valide: Gardevoir (Mega), Tyrantrum (fossile Drago/Roccia), "
             "Goodra (Drago), Florges (Folletto), Pangoro (Lotta/Buio)."
         ),
@@ -438,7 +438,7 @@ GAME_STATIC_DATA: dict[str, dict] = {
             "vantaggio. Primarina (Acqua/Folletto) ha una tipizzazione eccellente con poche "
             "debolezze e colpisce forte con Canto della Sirena. Ha vantaggio contro molte "
             "sfide della storia. Litten e' altrettanto forte: Incineroar (Fuoco/Buio) "
-            "ha Intimorisci, statistiche solide e buona copertura. Rowlet e' buono ma "
+            "ha Prepotenza, statistiche solide e buona copertura. Rowlet e' buono ma "
             "Decidueye (Erba/Spettro) e' piu' fragile e ha una tipizzazione con piu' debolezze."
         ),
         "best_team": (
@@ -504,13 +504,13 @@ GAME_STATIC_DATA: dict[str, dict] = {
             "eccellenti, e con l'abilita' nascosta Libero (simile a Mutatipo di Greninja) "
             "cambia tipo ad ogni mossa. Anche senza abilita' nascosta, e' il piu' efficiente "
             "contro le palestre. Grookey e' secondo: Rillaboom (Erba) e' molto solido con "
-            "Campo Erboso da abilita' nascosta e ottimo Attacco. Sobble e' il piu' debole "
+            "Erbogenesi da abilita' nascosta e ottimo Attacco. Sobble e' il piu' debole "
             "dei tre: Inteleon (Acqua) e' un glass cannon veloce con buon Att.Sp ma fragile."
         ),
         "best_team": (
             "Una squadra bilanciata per Galar:\n"
             "- Cinderace (Fuoco) - starter, veloce e versatile\n"
-            "- Corviknight (Volante/Acciaio) - cattura Rookidee subito, tank con Specchioforza\n"
+            "- Corviknight (Volante/Acciaio) - cattura Rookidee subito, tank con Blindospecchio\n"
             "- Toxtricity (Elettro/Veleno) - evolvi Toxel (ricevuto nel Percorso 5), Forma Acuta o Bassa\n"
             "- Excadrill (Terra/Acciaio) - cattura nella Terra Selvaggia, potentissimo\n"
             "- Dragapult (Drago/Spettro) - cattura Dreepy nel Lago dell'Ira (tardi), uno dei piu' forti\n"
@@ -566,22 +566,22 @@ GAME_STATIC_DATA: dict[str, dict] = {
         "best_starter": (
             "Fuecoco e' generalmente il piu' consigliato. Skeledirge (Fuoco/Spettro) "
             "ha una tipizzazione unica eccellente, solo 4 debolezze e 6 resistenze + 1 immunita'. "
-            "La mossa firma Canto Ardente e' fortissima. Ha matchup favorevoli contro molte "
+            "La mossa firma Canzone Ardente e' fortissima. Ha matchup favorevoli contro molte "
             "sfide della storia. Quaxly e' altrettanto valido: Quaquaval (Acqua/Lotta) e' "
-            "veloce e forte fisicamente con Acquapasso. Sprigatito e' buono: "
-            "Meowscarada (Erba/Buio) e' velocissimo e colpisce forte con Truccofiore, "
+            "veloce e forte fisicamente con Idroballetto. Sprigatito e' buono: "
+            "Meowscarada (Erba/Buio) e' velocissimo e colpisce forte con Prestigiafiore, "
             "ma e' il piu' fragile dei tre."
         ),
         "best_team": (
             "Una squadra bilanciata per Paldea:\n"
-            "- Skeledirge (Fuoco/Spettro) - starter, Canto Ardente devastante\n"
-            "- Pawmot (Elettro/Lotta) - cattura Pawmi nel Percorso 1, Rivitalizzatore per cure\n"
+            "- Skeledirge (Fuoco/Spettro) - starter, Canzone Ardente devastante\n"
+            "- Pawmot (Elettro/Lotta) - cattura Pawmi nel Percorso 1, Preghiera Vitale per cure\n"
             "- Clodsire (Veleno/Terra) - cattura Wooper-Paldea presto, Assorbacqua + grande bulk\n"
-            "- Garganacl (Roccia) - cattura Nacli presto, Cura Salina lo rende quasi immortale\n"
+            "- Garganacl (Roccia) - cattura Nacli presto, Sale Purificante lo rende quasi immortale\n"
             "- Tinkaton (Folletto/Acciaio) - cattura Tinkatink, tipizzazione difensiva eccellente\n"
             "- Baxcalibur (Drago/Ghiaccio) - cattura Frigibax nella Provincia Guancia (3), potente attaccante\n"
             "Alternative valide: Ceruledge o Armarouge (esclusivi di versione), Kingambit "
-            "(Buio/Acciaio, Resa Finale), Garchomp (tardi), Annihilape (Lotta/Spettro), "
+            "(Buio/Acciaio, Generale Supremo), Garchomp (tardi), Annihilape (Lotta/Spettro), "
             "Palafin (Acqua, forma Eroe fortissima)."
         ),
         "legendaries": [

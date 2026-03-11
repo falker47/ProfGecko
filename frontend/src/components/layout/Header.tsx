@@ -81,7 +81,7 @@ export default function Header() {
           user ? (
             <UserMenu />
           ) : (
-            <div className="max-w-[40px] overflow-hidden rounded-full sm:max-w-none sm:overflow-visible sm:rounded-none">
+            <div className="max-w-[36px] overflow-hidden rounded-full sm:max-w-none sm:overflow-visible sm:rounded-none">
               <div ref={btnRef} />
             </div>
           )

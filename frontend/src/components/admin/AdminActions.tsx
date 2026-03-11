@@ -22,16 +22,32 @@ export default function AdminActions({
   const [ingestProgress, setIngestProgress] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
 
   function showMessage(text: string, duration = 5000) {
     setMessage(text);
     setTimeout(() => setMessage(""), duration);
   }
 
-  // Clean up polling on unmount
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  }, []);
+
+  const startTimer = useCallback((offsetSeconds = 0) => {
+    stopTimer();
+    startTimeRef.current = Date.now() - offsetSeconds * 1000;
+    timerRef.current = setInterval(() => {
+      const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
+      setIngestProgress(`In corso... ${secs}s`);
+    }, 1000);
+  }, [stopTimer]);
+
+  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
@@ -42,9 +58,7 @@ export default function AdminActions({
         const status = await getIngestionStatus(secret);
         if (status.status === "running") {
           setIngesting(true);
-          setIngestProgress(
-            `In corso... ${Math.round(status.elapsed_seconds ?? 0)}s`,
-          );
+          startTimer(status.elapsed_seconds ?? 0);
           startPolling();
         }
       } catch {
@@ -60,13 +74,10 @@ export default function AdminActions({
     pollRef.current = setInterval(async () => {
       try {
         const status: IngestionStatus = await getIngestionStatus(secret);
-        if (status.status === "running") {
-          setIngestProgress(
-            `In corso... ${Math.round(status.elapsed_seconds ?? 0)}s`,
-          );
-        } else if (status.status === "completed") {
+        if (status.status === "completed") {
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
+          stopTimer();
           setIngesting(false);
           setIngestProgress("");
           const docs = status.documents_indexed ?? 0;
@@ -79,6 +90,7 @@ export default function AdminActions({
         } else if (status.status === "error") {
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
+          stopTimer();
           setIngesting(false);
           setIngestProgress("");
           showMessage(
@@ -87,10 +99,10 @@ export default function AdminActions({
           );
         }
       } catch {
-        // network error, keep polling
+        // network error, keep polling — local timer keeps ticking
       }
     }, 5000);
-  }, [secret, onAction]);
+  }, [secret, onAction, stopTimer]);
 
   async function handleInvalidate() {
     if (!confirm("Sei sicuro? Verranno eliminate tutte le voci non revisionate.")) {
@@ -195,8 +207,10 @@ export default function AdminActions({
       } else {
         showMessage("Ingestione avviata in background");
       }
+      startTimer();
       startPolling();
     } catch (err) {
+      stopTimer();
       setIngesting(false);
       setIngestProgress("");
       if (err instanceof Error && err.message === "AUTH_FAILED") {

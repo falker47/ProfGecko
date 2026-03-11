@@ -419,38 +419,34 @@ class ResponseCache:
         Tries exact hash first, then normalized hash. On hit, updates
         hit_count and last_hit_at for LRU tracking.
 
-        Skips entries with feedback='M' (auto-detected "missing info"
-        responses) so they get re-generated with the current prompt.
-        Only reviewed entries ('Y') and unreviewed ('-') are served.
+        Only serves entries that have been manually reviewed/approved
+        (reviewed = 1).  Unreviewed entries stay in the DB for admin
+        review but are never served to users.
         """
         exact = _exact_hash(question)
         normal = _normal_hash(question)
 
-        # Level 1: exact match
+        # Level 1: exact match (only reviewed entries)
         row = await self._fetchone(
-            "SELECT id, response, feedback FROM response_cache WHERE exact_hash = ? AND generation = ?",
+            "SELECT id, response FROM response_cache "
+            "WHERE exact_hash = ? AND generation = ? AND reviewed = 1",
             (exact, generation),
         )
         if row:
-            if row["feedback"] == "M":
-                logger.info("Cache SKIP (exact, feedback=M) for %r gen=%d", question[:60], generation)
-            else:
-                await self._record_hit(row["id"])
-                logger.info("Cache HIT (exact) for %r gen=%d", question[:60], generation)
-                return (row["response"], row["id"])
+            await self._record_hit(row["id"])
+            logger.info("Cache HIT (exact) for %r gen=%d", question[:60], generation)
+            return (row["response"], row["id"])
 
-        # Level 2: normalized match
+        # Level 2: normalized match (only reviewed entries)
         row = await self._fetchone(
-            "SELECT id, response, feedback FROM response_cache WHERE normal_hash = ? AND generation = ?",
+            "SELECT id, response FROM response_cache "
+            "WHERE normal_hash = ? AND generation = ? AND reviewed = 1",
             (normal, generation),
         )
         if row:
-            if row["feedback"] == "M":
-                logger.info("Cache SKIP (normalized, feedback=M) for %r gen=%d", question[:60], generation)
-            else:
-                await self._record_hit(row["id"])
-                logger.info("Cache HIT (normalized) for %r gen=%d", question[:60], generation)
-                return (row["response"], row["id"])
+            await self._record_hit(row["id"])
+            logger.info("Cache HIT (normalized) for %r gen=%d", question[:60], generation)
+            return (row["response"], row["id"])
 
         logger.info("Cache MISS for %r gen=%d", question[:60], generation)
         return None

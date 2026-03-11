@@ -38,6 +38,9 @@ from app.core.cache_normalization import (
 
 logger = logging.getLogger(__name__)
 
+# Pre-compiled pattern for tokenization (used by _compute_final_tokens and debug_hash)
+_TOKEN_RE = re.compile(r"[a-zA-ZÀ-ÿ0-9]+")
+
 # ── Custom stopwords (loaded from DB at startup, managed via admin) ──
 # This set is merged with STOPWORDS in the hash pipeline.
 # Use load_custom_stopwords() to populate from the DB.
@@ -89,7 +92,7 @@ def _compute_final_tokens(question: str) -> list[str]:
     the duplicate-groups endpoint. Returns the list of tokens that
     form the hash input.
     """
-    tokens = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", question.lower())
+    tokens = _TOKEN_RE.findall(question.lower())
 
     # Step 0: split aggregated gen tokens (gen4 → gen + 4)
     tokens = _split_gen_tokens(tokens)
@@ -186,7 +189,7 @@ class ResponseCache:
                 _custom_stopwords.add(w)
                 added += 1
             except Exception:
-                pass
+                logger.warning("Failed to add stopword %r", w, exc_info=True)
         await self._db.commit()
         logger.info("Custom stopwords ADD: %d words added, total now %d",
                      added, len(_custom_stopwords))
@@ -768,7 +771,7 @@ class ResponseCache:
         Returns the exact hash, normal hash, and the intermediate
         normalized tokens so you can verify the pipeline visually.
         """
-        tokens = re.findall(r"[a-zA-ZÀ-ÿ0-9]+", question.lower())
+        tokens = _TOKEN_RE.findall(question.lower())
 
         # Step 0: split gen tokens
         tokens = _split_gen_tokens(tokens)

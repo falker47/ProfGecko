@@ -1,4 +1,5 @@
 import json
+import logging
 from enum import Enum
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
@@ -10,6 +11,8 @@ from app.core.cache import ResponseCache
 from app.core.rag_chain import RAGChain
 from app.credits.dependencies import check_and_deduct_credit
 from app.models.schemas import ChatRequest, ChatResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -61,20 +64,23 @@ async def chat_stream(
     history = [{"role": m.role, "content": m.content} for m in body.chat_history]
     generation = RAGChain._detect_generation_with_history(body.message, history)
 
+    # Per-request metadata dict — avoids shared state on rag_chain instance
+    meta: dict = {}
+
     async def event_generator():
         try:
             async for chunk in rag_chain.astream_cached(
                 question=body.message,
                 chat_history=history,
                 cache=cache,
+                metadata=meta,
             ):
                 yield {
                     "event": "token",
                     "data": json.dumps({"token": chunk}),
                 }
         except Exception as exc:
-            import logging
-            logging.getLogger(__name__).exception("LLM streaming error")
+            logger.exception("LLM streaming error")
             err_str = str(exc)
             # Extract model name from error for debugging
             model_hint = ""
@@ -95,19 +101,22 @@ async def chat_stream(
         # Refund the pre-deducted credit when:
         # - cache hit (already answered, no LLM cost)
         # - missing info response (LLM couldn't answer from context)
-        was_cache_hit = getattr(rag_chain, "_last_cache_hit", False)
-        was_missing = getattr(rag_chain, "_last_was_missing", False)
-        entry_id = getattr(rag_chain, "_last_entry_id", None)
+        was_cache_hit = meta.get("cache_hit", False)
+        was_missing = meta.get("was_missing", False)
+        entry_id = meta.get("entry_id")
         final_credits = credit_info
         should_refund = was_cache_hit or was_missing
         if should_refund and credit_info and user and request.app.state.db:
-            from app.config import get_settings
-            settings = get_settings()
-            db = request.app.state.db
-            await db.refund_last_deduction(user["id"])
-            final_credits = await db.get_credit_balance(
-                user["id"], settings.daily_free_credits
-            )
+            try:
+                from app.config import get_settings
+                settings = get_settings()
+                db = request.app.state.db
+                await db.refund_last_deduction(user["id"])
+                final_credits = await db.get_credit_balance(
+                    user["id"], settings.daily_free_credits
+                )
+            except Exception:
+                logger.exception("Failed to refund credit for user %s", user["id"])
 
         yield {
             "event": "done",

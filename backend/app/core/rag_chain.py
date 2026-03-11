@@ -403,6 +403,7 @@ class RAGChain:
                     include=["documents", "metadatas"],
                 )
             except Exception:
+                logger.warning("Chroma name-match query failed for %r", name, exc_info=True)
                 continue
 
             for j, doc_id in enumerate(results["ids"]):
@@ -457,6 +458,7 @@ class RAGChain:
                     include=["documents", "metadatas"],
                 )
             except Exception:
+                logger.warning("Chroma summary query failed for category %r", cat, exc_info=True)
                 continue
 
             for j, doc_id in enumerate(results["ids"]):
@@ -493,6 +495,7 @@ class RAGChain:
                 include=["documents", "metadatas"],
             )
         except Exception:
+            logger.warning("Chroma query failed for summary category %r", category, exc_info=True)
             return []
         docs = []
         for j, doc_id in enumerate(results["ids"]):
@@ -520,6 +523,7 @@ class RAGChain:
                 include=["documents", "metadatas"],
             )
         except Exception:
+            logger.warning("Chroma query failed for trainer_info gen=%d", generation, exc_info=True)
             return []
         docs = []
         for j, doc_id in enumerate(results["ids"]):
@@ -594,6 +598,7 @@ class RAGChain:
                 include=["documents", "metadatas"],
             )
         except Exception:
+            logger.warning("Chroma query failed for game_info categories=%r", categories, exc_info=True)
             return []
 
         docs = []
@@ -886,13 +891,18 @@ class RAGChain:
         question: str,
         chat_history: list[dict] | None = None,
         cache: ResponseCache | None = None,
+        metadata: dict | None = None,
     ):
         """Stream with cache support.
 
-        On cache hit: yields the cached response in a single chunk
-        and sets ``self._last_cache_hit = True``.
+        On cache hit: yields the cached response in a single chunk.
         On cache miss: streams from LLM, collects the full response,
-        stores it in cache, and sets ``self._last_cache_hit = False``.
+        and stores it in cache.
+
+        Populates the *metadata* dict (if provided) with:
+        - ``cache_hit``: bool
+        - ``entry_id``: int | None
+        - ``was_missing``: bool
 
         Cache eligibility:
         - First question (no history): always cacheable.
@@ -903,9 +913,10 @@ class RAGChain:
 
         Uses the same word-count threshold as _build_retrieval_query.
         """
-        self._last_cache_hit = False
-        self._last_entry_id: int | None = None
-        self._last_was_missing = False
+        meta = metadata if metadata is not None else {}
+        meta.setdefault("cache_hit", False)
+        meta.setdefault("entry_id", None)
+        meta.setdefault("was_missing", False)
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
 
@@ -936,8 +947,8 @@ class RAGChain:
             cached = await cache.get(question, generation)
             if cached is not None:
                 response_text, entry_id = cached
-                self._last_cache_hit = True
-                self._last_entry_id = entry_id
+                meta["cache_hit"] = True
+                meta["entry_id"] = entry_id
                 yield response_text
                 return
 
@@ -953,6 +964,6 @@ class RAGChain:
             # Auto-detect "missing info" responses → feedback='M'
             is_missing = _MISSING_PHRASE in response_text.lower()
             feedback = "M" if is_missing else "-"
-            self._last_was_missing = is_missing
+            meta["was_missing"] = is_missing
             entry_id = await cache.put(question, generation, response_text, feedback=feedback)
-            self._last_entry_id = entry_id
+            meta["entry_id"] = entry_id

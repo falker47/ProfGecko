@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app.api.rate_limit import limiter
 from app.auth.dependencies import get_current_user_required
 from app.auth.google import verify_google_token
 from app.auth.jwt import create_access_token
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/google", response_model=AuthResponse)
+@limiter.limit("10/minute")
 async def login_with_google(request: Request, body: GoogleLoginRequest):
     """Verify Google ID token, create/update user, return JWT."""
     settings = get_settings()

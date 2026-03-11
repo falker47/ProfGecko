@@ -3,7 +3,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_default_handler
+from slowapi.errors import RateLimitExceeded
 
+from app.api.rate_limit import limiter, rate_limit_exceeded_handler
 from app.api.router import api_router
 from app.config import get_settings
 from app.core.cache import ResponseCache, load_custom_stopwords
@@ -115,6 +118,10 @@ def create_app() -> FastAPI:
         title="Prof. Gallade API",
         lifespan=lifespan,
     )
+
+    # Rate limiting
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
     app.add_middleware(
         CORSMiddleware,

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from app.api.rate_limit import limiter
 from app.auth.dependencies import get_current_user_optional
 from app.config import get_settings
 from app.core.cache import ResponseCache
@@ -29,6 +30,7 @@ class FeedbackBody(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("20/minute")
 async def chat(
     request: Request,
     body: ChatRequest,
@@ -48,6 +50,7 @@ async def chat(
 
 
 @router.post("/chat/stream")
+@limiter.limit("20/minute")
 async def chat_stream(
     request: Request,
     body: ChatRequest,
@@ -132,6 +135,7 @@ async def chat_stream(
 
 
 @router.post("/chat/feedback")
+@limiter.limit("30/minute")
 async def submit_feedback(
     request: Request,
     body: FeedbackBody = Body(...),

@@ -1,14 +1,14 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MessageSchema(BaseModel):
     role: str
-    content: str
+    content: str = Field(..., max_length=2000)
 
 
 class ChatRequest(BaseModel):
-    message: str
-    chat_history: list[MessageSchema] = []
+    message: str = Field(..., min_length=1, max_length=500)
+    chat_history: list[MessageSchema] = Field(default=[], max_length=20)
 
 
 class ChatResponse(BaseModel):

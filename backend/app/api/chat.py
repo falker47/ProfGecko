@@ -1,6 +1,6 @@
 import json
 import logging
-from enum import Enum
+from enum import StrEnum
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-class FeedbackValue(str, Enum):
+class FeedbackValue(StrEnum):
     V = "V"
     F = "F"
 

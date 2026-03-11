@@ -2039,7 +2039,6 @@ def _build_reverse_item_usage(
     Pokemon competitively use which items.  Item slugs use PokeAPI format
     (lowercase, hyphens) to match ``item["name"]`` in ``items_data``.
     """
-    import re
     from app.ingestion.smogon_transformer import _to_slug
 
     # Build species display name (EN) → Italian name lookup

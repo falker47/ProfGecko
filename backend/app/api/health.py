@@ -4,8 +4,6 @@ import traceback
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from app.models.schemas import HealthResponse
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 

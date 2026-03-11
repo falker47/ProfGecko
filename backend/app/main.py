@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_default_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.rate_limit import limiter, rate_limit_exceeded_handler
@@ -11,10 +10,10 @@ from app.api.router import api_router
 from app.config import get_settings
 from app.core.cache import ResponseCache, load_custom_stopwords
 from app.core.embeddings import get_embeddings
-from app.db.database import Database
 from app.core.llm import get_llm
 from app.core.rag_chain import RAGChain
 from app.core.vectorstore import get_vectorstore
+from app.db.database import Database
 
 # Configura logging — mostra INFO per i moduli app, WARNING per librerie rumorose
 logging.basicConfig(

@@ -21,7 +21,7 @@ STOPWORDS: frozenset[str] = frozenset({
     "queste", "quanti", "quante", "quanto", "do", "mio",
     "tutto", "tutta", "tutti", "tutte",
     "molto", "poco", "troppo", "anche", "ancora", "tanto", "così", "cosi",
-    "su", "nei", "oppure",
+    "su", "oppure",
     "perché", "perche", "perchè",  # interrogative / conjunction
     # Italian — common verbs / filler in questions
     "hanno", "ha", "hai", "puoi", "può", "fa", "vai", "vorrei", "sapere",
@@ -47,8 +47,8 @@ STOPWORDS: frozenset[str] = frozenset({
     "what", "which", "who", "how", "does", "can", "the", "and",
     "are", "is", "of", "in", "for", "to", "from", "with", "has", "have",
     "its", "their", "this", "that", "about", "tell", "me", "show",
-    "please", "pokemon", "learn", "learns",
-    "effect", "info", "strong", "good", "vs", "details",
+    "please", "learn", "learns",
+    "effect", "strong", "good", "details",
 })
 
 # ── Ordinal → digit conversion (IT + EN) ────────────────────────────

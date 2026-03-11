@@ -1,6 +1,6 @@
 """JWT creation and verification."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 
@@ -13,8 +13,8 @@ def create_access_token(
     """Create a signed JWT with the user ID as subject."""
     payload = {
         "sub": user_id,
-        "iat": datetime.now(timezone.utc),
-        "exp": datetime.now(timezone.utc) + timedelta(hours=expires_hours),
+        "iat": datetime.now(UTC),
+        "exp": datetime.now(UTC) + timedelta(hours=expires_hours),
     }
     return jwt.encode(payload, secret, algorithm="HS256")
 

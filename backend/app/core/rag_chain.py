@@ -9,8 +9,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app.core.cache import ResponseCache
-from app.core.generation_mapper import LATEST_GENERATION, detect_generation, detect_game_slug
-from app.core.prompts import PROF_GALLADE_SYSTEM_PROMPT, PROF_GALLADE_STRATEGIC_PROMPT
+from app.core.generation_mapper import LATEST_GENERATION, detect_game_slug, detect_generation
+from app.core.prompts import PROF_GALLADE_STRATEGIC_PROMPT, PROF_GALLADE_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ _STOP_WORDS = frozenset({
     "capopalestra", "capipalestra", "superquattro",
     "campione", "champion", "palestra", "lega",
     # Game info terms
-    "starter", "iniziale", "iniziali", "esclusivo", "esclusivi",
+    "iniziale", "iniziali", "esclusivo", "esclusivi",
     "leggendario", "leggendari",
     # Game title words (prevent game names from being name candidates)
     "rosso", "blu", "giallo", "oro", "argento", "cristallo",
@@ -115,8 +115,8 @@ _STOP_WORDS = frozenset({
     "generazione", "gen", "catena", "evolutiva", "evoluzione",
     "base", "totale", "velocita", "velocità", "attacco", "difesa", "speciale",
     # Verbi/termini aggiuntivi
-    "qual", "quale", "quando", "quanti", "quante",
-    "tasso", "crescita", "cattura",
+    "qual", "quando", "quanti", "quante",
+    "tasso", "crescita",
 })
 
 # Soglia parole per considerare una domanda auto-contenuta (non un follow-up).
@@ -498,7 +498,7 @@ class RAGChain:
             logger.warning("Chroma query failed for summary category %r", category, exc_info=True)
             return []
         docs = []
-        for j, doc_id in enumerate(results["ids"]):
+        for j, _doc_id in enumerate(results["ids"]):
             docs.append(Document(
                 page_content=results["documents"][j],
                 metadata=results["metadatas"][j],
@@ -526,7 +526,7 @@ class RAGChain:
             logger.warning("Chroma query failed for trainer_info gen=%d", generation, exc_info=True)
             return []
         docs = []
-        for j, doc_id in enumerate(results["ids"]):
+        for j, _doc_id in enumerate(results["ids"]):
             docs.append(Document(
                 page_content=results["documents"][j],
                 metadata=results["metadatas"][j],
@@ -602,7 +602,7 @@ class RAGChain:
             return []
 
         docs = []
-        for j, doc_id in enumerate(results["ids"]):
+        for j, _doc_id in enumerate(results["ids"]):
             docs.append(Document(
                 page_content=results["documents"][j],
                 metadata=results["metadatas"][j],

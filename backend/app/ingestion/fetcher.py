@@ -202,7 +202,7 @@ async def fetch_all_data(client: PokeAPIClient, max_pokemon_id: int = 1025):
     # Phase 9: Encounters (location/version data)
     encounters_data = await fetch_all_encounters(client, max_pokemon_id)
 
-    print(f"\n=== Fetch complete ===")
+    print("\n=== Fetch complete ===")
     print(f"  Pokemon: {len(pokemon_data)}")
     print(f"  Species: {len(species_data)}")
     print(f"  Evo Chains: {len(evo_chains)}")

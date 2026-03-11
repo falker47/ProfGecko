@@ -1,5 +1,6 @@
 """Async SQLite database for user and credit management."""
 
+import contextlib
 import uuid
 from pathlib import Path
 
@@ -37,10 +38,8 @@ class Database:
             "ALTER TABLE response_cache ADD COLUMN feedback TEXT NOT NULL DEFAULT '-'",
         ]
         for sql in migrations:
-            try:
+            with contextlib.suppress(Exception):  # Column already exists
                 await self._conn.execute(sql)
-            except Exception:
-                pass  # Column already exists
         await self._conn.commit()
 
     async def close(self) -> None:

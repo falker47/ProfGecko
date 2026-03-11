@@ -23,8 +23,8 @@ async def login_with_google(request: Request, body: GoogleLoginRequest):
 
     try:
         google_info = verify_google_token(body.id_token, settings.google_client_id)
-    except ValueError:
-        raise HTTPException(401, "Token Google non valido o scaduto")
+    except ValueError as err:
+        raise HTTPException(401, "Token Google non valido o scaduto") from err
 
     db = request.app.state.db
     user = await db.upsert_user(

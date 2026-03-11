@@ -46,7 +46,7 @@ _STOPWORDS: frozenset[str] = frozenset({
     "che", "chi", "ci", "per", "con", "tra", "far", "fare", "fra", "non", "piu", "più", "di", "mi",
     "come", "cosa", "quali", "quale", "qual", "si", "sono", "suo", "sua",
     "suoi", "sue", "questo", "questa", "quello", "quella", "questi",
-    "queste", "quanti", "quante", "quanto",
+    "queste", "quanti", "quante", "quanto", "do", "mio",
     "tutto", "tutta", "tutti", "tutte",
     "molto", "poco", "troppo", "anche", "ancora", "tanto", "così", "cosi",
     "su", "nei", "oppure",

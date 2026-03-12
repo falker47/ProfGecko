@@ -800,6 +800,19 @@ class RAGChain:
         # Phase 0: summary document matching per domande analitiche
         summary_docs = self._find_summaries(original_question, generation)
 
+        # Mega evolution fallback: i doc mega esistono solo in gen 6/7.
+        # Se la query parla di mega evoluzioni ma la gen rilevata è diversa
+        # (tipicamente gen 9 default), cerca anche in gen 6.
+        _MEGA_KW = ("mega evoluzione", "megaevoluzione", "mega evoluzioni",
+                     "megaevoluzioni", "mega evolution", "quante mega",
+                     "lista mega", "megapietre")
+        if (not summary_docs
+                and any(kw in q_lower for kw in _MEGA_KW)
+                and generation not in (6, 7)):
+            summary_docs = self._find_summaries_by_category(
+                "mega_evolution_list", 6,
+            )
+
         # Per domande strategiche senza summary match, inietta il roster BST
         if is_strategic and not summary_docs:
             summary_docs = self._find_summaries_by_category(

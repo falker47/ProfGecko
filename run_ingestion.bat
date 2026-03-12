@@ -1,5 +1,4 @@
 @echo off
-:: Posizionati nella directory del bat (fix path relativi)
 cd /d "%~dp0"
 
 echo ============================================
@@ -7,8 +6,7 @@ echo   Prof. Gecko - Avvio Re-ingestion dati
 echo ============================================
 echo.
 
-:: Verifica prerequisiti
-if not exist "backend\.venv\Scripts\activate" (
+if not exist "backend\.venv\Scripts\activate.bat" (
     echo [ERRORE] backend\.venv non trovato!
     echo Esegui:  cd backend ^&^& python -m venv .venv ^&^& .venv\Scripts\activate ^&^& pip install -r requirements.txt
     pause
@@ -16,8 +14,8 @@ if not exist "backend\.venv\Scripts\activate" (
 )
 
 echo Avvio Re-ingestion dati (--force)...
-start "Prof. Gecko Ingestion" cmd /k "cd /d "%~dp0backend" && call .venv\Scripts\activate && python -m app.ingestion.run_ingestion --force"
+start "ProfGecko-Ingestion" "%~dp0backend\_start_ingestion.bat"
 
 echo.
-echo Re-ingestion avviata in una nuova finestra in background.
+echo Re-ingestion avviata in una nuova finestra.
 pause

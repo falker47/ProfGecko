@@ -10,7 +10,8 @@ This module covers alternative obtainment methods such as:
 Keyed by lowercase PokeAPI species name. Each entry lists the generation,
 game versions (Italian names), method, and details.
 
-Sources: Bulbapedia, Serebii, PokemonDB
+Sources verified via Perplexity (Bulbapedia, Pokemon Central Wiki) — 2026-03-12
+NPC names, location names, item names: official Italian game translations.
 """
 
 from __future__ import annotations
@@ -18,15 +19,17 @@ from __future__ import annotations
 SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
     # ── Game Corner / Casino purchases ─────────────────────────────
     "abra": [
+        # Perplexity: Rosso=180, Blu=120, Giallo=230
         {"generation": 1, "versions": ["Rosso", "Blu"],
          "method_it": "Sala Giochi di Azzurropoli",
-         "details_it": "Acquisto per 200 gettoni (Blu) o 120 (Rosso)"},
+         "details_it": "Acquisto per 180 gettoni (Rosso) o 120 (Blu)"},
         {"generation": 1, "versions": ["Giallo"],
          "method_it": "Sala Giochi di Azzurropoli",
          "details_it": "Acquisto per 230 gettoni"},
+        # Perplexity: RF=180, VF=120
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Sala Giochi di Azzurropoli",
-         "details_it": "Acquisto per 120 gettoni (RF) o 180 (VF)"},
+         "details_it": "Acquisto per 180 gettoni (RF) o 120 (VF)"},
     ],
     "clefairy": [
         {"generation": 1, "versions": ["Rosso", "Blu"],
@@ -37,29 +40,31 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
          "details_it": "Acquisto per 500 gettoni (RF) o 750 (VF)"},
     ],
     "dratini": [
-        {"generation": 1, "versions": ["Rosso", "Blu"],
+        # Perplexity: Rosso=2800, Blu=4600. Giallo: NON disponibile alla Sala Giochi
+        {"generation": 1, "versions": ["Rosso"],
          "method_it": "Sala Giochi di Azzurropoli",
          "details_it": "Acquisto per 2800 gettoni"},
-        {"generation": 1, "versions": ["Giallo"],
+        {"generation": 1, "versions": ["Blu"],
          "method_it": "Sala Giochi di Azzurropoli",
          "details_it": "Acquisto per 4600 gettoni"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Sala Giochi di Azzurropoli",
          "details_it": "Acquisto per 2800 gettoni"},
-        {"generation": 4, "versions": ["HeartGold", "SoulSilver"],
+        {"generation": 4, "versions": ["Oro HeartGold", "Argento SoulSilver"],
          "method_it": "Tana del Drago",
          "details_it": "Dono dal Capo degli Anziani dopo il test nella Tana del Drago"},
     ],
     "porygon": [
+        # Perplexity: Rosso=9999, Blu=6500, Giallo=9999
         {"generation": 1, "versions": ["Rosso", "Blu"],
          "method_it": "Sala Giochi di Azzurropoli",
-         "details_it": "Acquisto per 9999 gettoni (R) o 6500 (B)"},
+         "details_it": "Acquisto per 9999 gettoni (Rosso) o 6500 (Blu)"},
         {"generation": 1, "versions": ["Giallo"],
          "method_it": "Sala Giochi di Azzurropoli",
-         "details_it": "Acquisto per 6500 gettoni"},
+         "details_it": "Acquisto per 9999 gettoni"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Sala Giochi di Azzurropoli",
-         "details_it": "Acquisto per 9999 gettoni"},
+         "details_it": "Acquisto per 9999 gettoni (RF) o 6500 (VF)"},
     ],
     "scyther": [
         {"generation": 1, "versions": ["Rosso"],
@@ -77,11 +82,15 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
          "method_it": "Sala Giochi di Azzurropoli",
          "details_it": "Acquisto per 2500 gettoni"},
     ],
-    # Gen 2 Casino
+
+    # ── In-game trades ───────────────────────────────────────────
     "mr. mime": [
-        {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
+        {"generation": 1, "versions": ["Rosso", "Blu"],
          "method_it": "Scambio in-game",
-         "details_it": "Scambia un Abra con una ragazza nel Percorso 2 (unico modo)"},
+         "details_it": "Scambia un Abra con una ragazza nel Percorso 2 (unico modo per ottenerlo)"},
+        {"generation": 1, "versions": ["Giallo"],
+         "method_it": "Scambio in-game",
+         "details_it": "Scambia un Clefairy con una ragazza nel Percorso 2 (unico modo per ottenerlo)"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Scambio in-game",
          "details_it": "Scambia un Abra con una ragazza nel Percorso 2"},
@@ -106,19 +115,26 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
     "eevee": [
         {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
          "method_it": "Dono",
-         "details_it": "Trovato sul tetto del Condominio Pokemon di Azzurropoli"},
-        {"generation": 2, "versions": ["Oro", "Argento", "Cristallo"],
+         "details_it": "Trovato sul tetto del Condominio di Azzurropoli"},
+        # Perplexity: Oro e Cristallo da Bill; Argento dalla Sala Giochi
+        {"generation": 2, "versions": ["Oro", "Cristallo"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto da Bill ad Amarantopoli"},
+         "details_it": "Ricevuto da Bill a Fiordoropoli"},
+        {"generation": 2, "versions": ["Argento"],
+         "method_it": "Sala Giochi di Fiordoropoli",
+         "details_it": "Acquisto per 6666 gettoni alla Sala Giochi di Fiordoropoli"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Dono",
-         "details_it": "Trovato sul tetto del Condominio Pokemon di Azzurropoli"},
-        {"generation": 4, "versions": ["HeartGold", "SoulSilver"],
+         "details_it": "Trovato sul tetto del Condominio di Azzurropoli"},
+        {"generation": 4, "versions": ["Oro HeartGold", "Argento SoulSilver"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto da Bill ad Amarantopoli"},
-        {"generation": 4, "versions": ["Diamante", "Perla", "Platino"],
+         "details_it": "Ricevuto da Bill a Fiordoropoli"},
+        {"generation": 4, "versions": ["Diamante", "Perla"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto da Narciso a Cuoripoli (dopo Pokedex Nazionale)"},
+         "details_it": "Ricevuto da Bebe (amministratrice PC) a Cuoripoli (dopo Pokedex Nazionale)"},
+        {"generation": 4, "versions": ["Platino"],
+         "method_it": "Dono NPC",
+         "details_it": "Ricevuto da Bebe (amministratrice PC) a Cuoripoli (disponibile senza Pokedex Nazionale)"},
         {"generation": 6, "versions": ["X", "Y"],
          "method_it": "Dono NPC",
          "details_it": "Ricevuto da un NPC nel Percorso 10"},
@@ -126,16 +142,17 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
     "lapras": [
         {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto da un dipendente Silph al 7o piano della Silph S.p.A. a Zafferanopoli"},
+         "details_it": "Ricevuto da un dipendente Silph al 7° piano della Silph S.p.A. a Zafferanopoli"},
+        # Lapras appare ogni venerdi nella Grotta di Mezzo (tra Percorso 32 e 33)
         {"generation": 2, "versions": ["Oro", "Argento", "Cristallo"],
          "method_it": "Incontro speciale",
-         "details_it": "Appare nelle Grotte di Ghiaccio ogni venerdi (seminterrato)"},
+         "details_it": "Appare ogni venerdi nella Grotta di Mezzo (piano inferiore, serve Surf)"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto da un dipendente Silph al 7o piano della Silph S.p.A."},
-        {"generation": 4, "versions": ["HeartGold", "SoulSilver"],
+         "details_it": "Ricevuto da un dipendente Silph al 7° piano della Silph S.p.A."},
+        {"generation": 4, "versions": ["Oro HeartGold", "Argento SoulSilver"],
          "method_it": "Incontro speciale",
-         "details_it": "Appare nelle Grotte di Ghiaccio ogni venerdi"},
+         "details_it": "Appare ogni venerdi nella Grotta di Mezzo (piano inferiore, serve Surf)"},
     ],
     "hitmonlee": [
         {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
@@ -157,38 +174,41 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
         {"generation": 2, "versions": ["Oro", "Argento", "Cristallo"],
          "method_it": "Uovo dono",
          "details_it": "Uovo ricevuto dall'Assistente del Prof. Elm al Centro Pokemon dopo il primo badge"},
-        {"generation": 4, "versions": ["HeartGold", "SoulSilver"],
+        {"generation": 4, "versions": ["Oro HeartGold", "Argento SoulSilver"],
          "method_it": "Uovo dono",
          "details_it": "Uovo ricevuto dall'Assistente del Prof. Elm al Centro Pokemon"},
-        {"generation": 4, "versions": ["Diamante", "Perla", "Platino"],
+        # Perplexity: solo Platino da Camilla, NON in Diamante/Perla
+        {"generation": 4, "versions": ["Platino"],
          "method_it": "Uovo dono",
-         "details_it": "Uovo ricevuto da Camilla a Cuoripoli"},
+         "details_it": "Uovo ricevuto da Camilla a Evopoli"},
     ],
     "riolu": [
         {"generation": 4, "versions": ["Diamante", "Perla", "Platino"],
          "method_it": "Uovo dono",
          "details_it": "Uovo ricevuto da Marisio sull'Isola Ferrosa (poi evolve in Lucario con amicizia)"},
-        {"generation": 4, "versions": ["HeartGold", "SoulSilver"],
-         "method_it": "Uovo dono",
-         "details_it": "Uovo ricevuto al Percorso Camminata dopo la Hall of Fame"},
+        {"generation": 4, "versions": ["Oro HeartGold", "Argento SoulSilver"],
+         "method_it": "Pokewalker",
+         "details_it": "Disponibile nella rotta Pokewalker 'Percorso Camminata' (accessorio esterno richiesto)"},
     ],
     "lucario": [
+        # Perplexity: da Ornella (non "Guru della Lotta") alla Torre della Maestria
         {"generation": 6, "versions": ["X", "Y"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto dal Guru della Lotta a Shalour City con la sua Lucarionite"},
+         "details_it": "Ricevuto da Ornella alla Torre della Maestria di Yantaropoli con la sua Lucarite"},
     ],
     "castform": [
+        # Perplexity: "Istituto Meteo" e' il nome ufficiale italiano
         {"generation": 3, "versions": ["Rubino", "Zaffiro", "Smeraldo"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto al Centro Meteorologico sul Percorso 119 dopo aver sconfitto il Team"},
+         "details_it": "Ricevuto all'Istituto Meteo sul Percorso 119 dopo aver sconfitto il Team"},
         {"generation": 6, "versions": ["Rubino Omega", "Zaffiro Alpha"],
          "method_it": "Dono NPC",
-         "details_it": "Ricevuto al Centro Meteorologico sul Percorso 119"},
+         "details_it": "Ricevuto all'Istituto Meteo sul Percorso 119"},
     ],
     "beldum": [
         {"generation": 3, "versions": ["Rubino", "Zaffiro", "Smeraldo"],
          "method_it": "Dono NPC",
-         "details_it": "Pokeball sulla scrivania di Rocco Petri (casa postgame a Porto Alghepoli)"},
+         "details_it": "Pokeball sulla scrivania di Rocco Petri (casa postgame a Verdeazzupoli)"},
         {"generation": 6, "versions": ["Rubino Omega", "Zaffiro Alpha"],
          "method_it": "Dono NPC",
          "details_it": "Ricevuto da Rocco Petri dopo la Lega"},
@@ -196,12 +216,13 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
     "wynaut": [
         {"generation": 3, "versions": ["Rubino", "Zaffiro", "Smeraldo"],
          "method_it": "Uovo dono",
-         "details_it": "Uovo ricevuto da una signora alle Terme Ardenti"},
+         "details_it": "Uovo ricevuto da una signora alle terme di Cuordilava"},
     ],
     "zorua": [
+        # Perplexity confermato: richiede Celebi da evento
         {"generation": 5, "versions": ["Nero", "Bianco"],
-         "method_it": "Dono NPC",
-         "details_it": "Ricevuto come Zorua travestito a Castelia City (richiede evento Celebi)"},
+         "method_it": "Dono speciale",
+         "details_it": "Ricevuto a Austropoli trasferendo un Celebi da evento speciale tramite Relocator"},
     ],
     "larvesta": [
         {"generation": 5, "versions": ["Nero", "Bianco"],
@@ -223,26 +244,33 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
     ],
 
     # ── Fossil Pokemon (choice) ───────────────────────────────────
+    # Nomi fossili italiani ufficiali da Pokemon Central Wiki:
+    # Helix Fossil = Helixfossile, Dome Fossil = Domofossile,
+    # Old Amber = Ambra Antica, Root Fossil = Radifossile,
+    # Claw Fossil = Fossilunghia, Skull Fossil = Fossilcranio,
+    # Armor Fossil = Fossilscudo, Cover Fossil = Fossiltappo,
+    # Plume Fossil = Fossilpiuma, Jaw Fossil = Fossilmascella,
+    # Sail Fossil = Fossilpinna
     "omanyte": [
         {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
          "method_it": "Fossile",
-         "details_it": "Rigenera il Fossile Conchiglia al Laboratorio di Isola Cannella (scegli tra Omanyte e Kabuto)"},
+         "details_it": "Rigenera l'Helixfossile al Laboratorio di Isola Cannella (scegli tra Omanyte e Kabuto)"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Fossile",
-         "details_it": "Fossile Conchiglia nel Monte Luna (scegli tra Omanyte e Kabuto)"},
+         "details_it": "Helixfossile nel Monte Luna (scegli tra Omanyte e Kabuto)"},
     ],
     "kabuto": [
         {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
          "method_it": "Fossile",
-         "details_it": "Rigenera il Fossile Cupola al Laboratorio di Isola Cannella (scegli tra Omanyte e Kabuto)"},
+         "details_it": "Rigenera il Domofossile al Laboratorio di Isola Cannella (scegli tra Omanyte e Kabuto)"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Fossile",
-         "details_it": "Fossile Cupola nel Monte Luna (scegli tra Omanyte e Kabuto)"},
+         "details_it": "Domofossile nel Monte Luna (scegli tra Omanyte e Kabuto)"},
     ],
     "aerodactyl": [
         {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
          "method_it": "Fossile",
-         "details_it": "Rigenera l'Ambra Antica (ricevuta da uno scienziato al Museo di Plumbeopoli)"},
+         "details_it": "Rigenera l'Ambra Antica (ricevuta nella sezione segreta del Museo di Plumbeopoli con HM Taglio)"},
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Fossile",
          "details_it": "Ambra Antica dal Museo di Plumbeopoli"},
@@ -250,84 +278,96 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
     "lileep": [
         {"generation": 3, "versions": ["Rubino", "Zaffiro", "Smeraldo"],
          "method_it": "Fossile",
-         "details_it": "Fossile Radice nel Deserto (scegli tra Lileep e Anorith)"},
+         "details_it": "Radifossile nel Deserto del Percorso 111 (scegli tra Lileep e Anorith)"},
     ],
     "anorith": [
         {"generation": 3, "versions": ["Rubino", "Zaffiro", "Smeraldo"],
          "method_it": "Fossile",
-         "details_it": "Fossilartiglio nel Deserto (scegli tra Lileep e Anorith)"},
+         "details_it": "Fossilunghia nel Deserto del Percorso 111 (scegli tra Lileep e Anorith)"},
     ],
     "cranidos": [
-        {"generation": 4, "versions": ["Diamante", "Platino"],
+        # Perplexity: Fossilcranio. In Platino entrambi disponibili
+        {"generation": 4, "versions": ["Diamante"],
          "method_it": "Fossile",
-         "details_it": "Fossile Cranio scavato nel Sotterraneo"},
+         "details_it": "Fossilcranio scavato nel Sotterraneo (esclusivo Diamante)"},
+        {"generation": 4, "versions": ["Platino"],
+         "method_it": "Fossile",
+         "details_it": "Fossilcranio scavato nel Sotterraneo"},
         {"generation": 8, "versions": ["Diamante Lucente"],
          "method_it": "Fossile",
-         "details_it": "Fossile Cranio scavato nel Grand Underground"},
+         "details_it": "Fossilcranio scavato nel Grand Underground"},
     ],
     "shieldon": [
-        {"generation": 4, "versions": ["Perla", "Platino"],
+        # Perplexity: Fossilscudo. In Platino entrambi disponibili
+        {"generation": 4, "versions": ["Perla"],
          "method_it": "Fossile",
-         "details_it": "Fossile Armatura scavato nel Sotterraneo"},
+         "details_it": "Fossilscudo scavato nel Sotterraneo (esclusivo Perla)"},
+        {"generation": 4, "versions": ["Platino"],
+         "method_it": "Fossile",
+         "details_it": "Fossilscudo scavato nel Sotterraneo"},
         {"generation": 8, "versions": ["Perla Splendente"],
          "method_it": "Fossile",
-         "details_it": "Fossile Armatura scavato nel Grand Underground"},
+         "details_it": "Fossilscudo scavato nel Grand Underground"},
     ],
     "tirtouga": [
+        # Perplexity: fossili scelti al Castello Sepolto, rigenerati al Museo di Zefiropoli
         {"generation": 5, "versions": ["Nero", "Bianco", "Nero 2", "Bianco 2"],
          "method_it": "Fossile",
-         "details_it": "Fossile Coperchio ricevuto a Nacrene City"},
+         "details_it": "Fossiltappo ottenuto al Castello Sepolto, rigenerato al Museo di Zefiropoli"},
     ],
     "archen": [
         {"generation": 5, "versions": ["Nero", "Bianco", "Nero 2", "Bianco 2"],
          "method_it": "Fossile",
-         "details_it": "Fossile Piuma ricevuto a Nacrene City"},
+         "details_it": "Fossilpiuma ottenuto al Castello Sepolto, rigenerato al Museo di Zefiropoli"},
     ],
     "tyrunt": [
         {"generation": 6, "versions": ["X", "Y"],
          "method_it": "Fossile",
-         "details_it": "Fossile Mascella (scegli tra Tyrunt e Amaura)"},
+         "details_it": "Fossilmascella (scegli tra Tyrunt e Amaura)"},
     ],
     "amaura": [
         {"generation": 6, "versions": ["X", "Y"],
          "method_it": "Fossile",
-         "details_it": "Fossile Pinna (scegli tra Tyrunt e Amaura)"},
+         "details_it": "Fossilpinna (scegli tra Tyrunt e Amaura)"},
     ],
 
     # ── Notable in-game trades ─────────────────────────────────────
     "jynx": [
         {"generation": 1, "versions": ["Rosso", "Blu"],
          "method_it": "Scambio in-game",
-         "details_it": "Scambia un Poliwhirl con un NPC al Percorso 18"},
+         "details_it": "Scambia un Poliwhirl con un NPC a Celestopoli"},
     ],
     "farfetchd": [
         {"generation": 1, "versions": ["Rosso", "Blu"],
          "method_it": "Scambio in-game",
-         "details_it": "Scambia uno Spearow con un NPC a Vermilion City"},
+         "details_it": "Scambia uno Spearow con un NPC ad Aranciopoli"},
     ],
     "steelix": [
         {"generation": 4, "versions": ["Diamante", "Perla", "Platino"],
          "method_it": "Scambio in-game",
-         "details_it": "Scambia un Medicham con Mindy sul Percorso 226 (postgame, NON evolve perche' tiene Pietrasempre)"},
+         "details_it": "Scambio in-game disponibile sul Percorso 226 (postgame)"},
     ],
     "haunter": [
         {"generation": 4, "versions": ["Diamante", "Perla", "Platino"],
          "method_it": "Scambio in-game",
-         "details_it": "Scambia con Mindy a Nevepoli — attenzione: tiene Pietrasempre, quindi NON evolve in Gengar"},
+         "details_it": "Scambia un Medicham con Mindy a Nevepoli — attenzione: Haunter tiene Pietrastante, quindi NON evolve in Gengar"},
     ],
 
     # ── Gen 4 special: Spiritomb ───────────────────────────────────
     "spiritomb": [
+        # Perplexity: "Torre Memoria" per Hallowed Tower
         {"generation": 4, "versions": ["Diamante", "Perla", "Platino"],
          "method_it": "Evento speciale",
-         "details_it": "Inserisci la Pietra Chiave nella Torre Sgretolata (Percorso 209) dopo 32 interazioni nel Sotterraneo"},
+         "details_it": "Inserisci la Pietra Chiave nella Torre Memoria (Percorso 209) dopo 32 interazioni nel Sotterraneo"},
     ],
 
-    # ── Gen 5: Gift N's Pokemon ────────────────────────────────────
+    # ── Gen 5: Darmanitan Forma Zen ───────────────────────────────
     "darmanitan": [
+        # Perplexity: serve RageCandyBar, NON acqua
         {"generation": 5, "versions": ["Nero", "Bianco"],
          "method_it": "Dono speciale",
-         "details_it": "Darmanitan con abilita' Forma Zen davanti al Resort Deserto (usa Acqua sulle statue)"},
+         "details_it": "Darmanitan con abilita' Forma Zen davanti al Deserto della Quiete "
+                       "(usa una RageCandyBar sulle statue, acquistabile a Mistralopoli)"},
     ],
 
     # ── Snorlax (blocking) ─────────────────────────────────────────
@@ -338,19 +378,22 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Incontro statico",
          "details_it": "Due Snorlax bloccano i Percorsi 12 e 16, svegliabili con il Pokeflauto"},
-        {"generation": 4, "versions": ["HeartGold", "SoulSilver"],
+        # Perplexity: serve sintonizzare Pokegear su frequenza Pokeflauto (scheda EXPN da Lavender Town)
+        {"generation": 4, "versions": ["Oro HeartGold", "Argento SoulSilver"],
          "method_it": "Incontro statico",
-         "details_it": "Snorlax blocca l'ingresso della Grotta Diglett, svegliabile con il Pokeradio"},
+         "details_it": "Snorlax blocca l'ingresso della Grotta Diglett, svegliabile con il Pokegear "
+                       "sintonizzato sulla frequenza del Pokeflauto (richiede scheda EXPN)"},
     ],
 
     # ── Rotom ──────────────────────────────────────────────────────
     "rotom": [
+        # Perplexity: NON e' postgame, accessibile appena si raggiunge Antico Chateau
         {"generation": 4, "versions": ["Diamante", "Perla", "Platino"],
          "method_it": "Incontro statico",
-         "details_it": "TV nella Villa Chateau (notte, postgame in DP; pre-Lega in Platino)"},
+         "details_it": "TV nell'Antico Chateau di notte (richiede HM Taglio, accessibile prima della Lega)"},
     ],
 
-    # ── Magikarp (notable purchase) ────────────────────────────────
+    # ── Magikarp (notable purchase) + Red Gyarados ────────────────
     "magikarp": [
         {"generation": 1, "versions": ["Rosso", "Blu", "Giallo"],
          "method_it": "Acquisto NPC",
@@ -358,8 +401,8 @@ SUPPLEMENTAL_OBTAINMENT: dict[str, list[dict]] = {
         {"generation": 3, "versions": ["Rosso Fuoco", "Verde Foglia"],
          "method_it": "Acquisto NPC",
          "details_it": "Acquistabile per 500 Pokedollari dal venditore nel Centro Pokemon del Monte Luna"},
-        {"generation": 4, "versions": ["HeartGold", "SoulSilver"],
+        {"generation": 4, "versions": ["Oro HeartGold", "Argento SoulSilver"],
          "method_it": "Incontro speciale",
-         "details_it": "Red Gyarados (shiny) al Lago Collera (evento storia)"},
+         "details_it": "Red Gyarados (shiny) al Lago d'Ira (evento storia)"},
     ],
 }

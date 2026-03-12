@@ -2994,8 +2994,11 @@ def build_mega_evolution_documents(
     """Build mega evolution documents for Gen 6 and Gen 7.
 
     Produces:
-    - 1 summary doc listing all 48+ megas (entity_type: "summary")
+    - 1 summary doc listing all megas (entity_type: "summary")
     - 1 doc per mega form with full details (entity_type: "pokemon")
+
+    Includes classic Gen 6-7 megas AND Leggende Z-A megas (za_exclusive flag).
+    Z-A megas have no abilities (the game uses passive effects instead).
     """
     if generation not in (6, 7):
         return []
@@ -3015,29 +3018,39 @@ def build_mega_evolution_documents(
                     name_it_map[pid] = name_entry["name"]
                     break
 
+    # Count classic vs Z-A megas
+    classic_count = sum(1 for m in MEGA_EVOLUTIONS if not m.get("za_exclusive"))
+    za_count = sum(1 for m in MEGA_EVOLUTIONS if m.get("za_exclusive"))
+    z_mega_count = sum(1 for m in MEGA_EVOLUTIONS if m.get("z_mega"))
+
     # --- Summary document: list of all megas ---
     summary_lines = [
         f"Lista completa delle Mega Evoluzioni (Generazione {generation}):",
-        f"Totale: {len(MEGA_EVOLUTIONS)} forme Mega/Ancestrali "
-        f"(46 specie, Charizard e Mewtwo hanno 2 forme ciascuno, "
-        f"+ Kyogre/Groudon Ancestrali + Mega Rayquaza).",
+        f"Totale: {len(MEGA_EVOLUTIONS)} forme Mega/Ancestrali.",
+        f"- {classic_count} classiche (Gen 6-7): 46 specie + Charizard X/Y, "
+        f"Mewtwo X/Y, Kyogre/Groudon Ancestrali, Mega Rayquaza.",
+        f"- {za_count} nuove in Leggende Pokemon Z-A (di cui {z_mega_count} Z Mega).",
         "",
     ]
     for mega in MEGA_EVOLUTIONS:
         typing = mega["type1_it"]
         if mega["type2_it"]:
             typing += f"/{mega['type2_it']}"
+        ability_part = f"Abilita: {mega['ability_it']}" if mega["ability_it"] else "Abilita: N/A (Z-A)"
+        za_tag = " [Z-A]" if mega.get("za_exclusive") else ""
+        z_tag = " [Z Mega]" if mega.get("z_mega") else ""
         summary_lines.append(
             f"- {mega['mega_name_it']} ({typing}) — "
-            f"Abilita: {mega['ability_it']}, BST: {mega['bst']}"
+            f"{ability_part}, BST: {mega['bst']}{za_tag}{z_tag}"
         )
 
     summary_lines.append("")
     summary_lines.append(
-        "Le Mega Evoluzioni sono disponibili in Gen 6 (X/Y, Rubino Omega/Zaffiro Alpha) "
-        "e Gen 7 (Sole/Luna, Ultrasole/Ultraluna). "
-        "Ogni Pokemon puo' megaevolversi una volta per lotta usando la Megapietra corrispondente "
-        "(Rayquaza usa la mossa Ascesa del Drago)."
+        "Le Mega Evoluzioni classiche sono disponibili in Gen 6 (X/Y, Rubino Omega/"
+        "Zaffiro Alpha) e Gen 7 (Sole/Luna, Ultrasole/Ultraluna). "
+        "Le nuove Mega Evoluzioni [Z-A] sono esclusive di Leggende Pokemon Z-A. "
+        "Le Z Mega Evoluzioni [Z Mega] non richiedono caricamento per le mosse "
+        "ma consumano il Mega Potere piu' rapidamente."
     )
 
     docs.append(Document(
@@ -3057,20 +3070,45 @@ def build_mega_evolution_documents(
             typing += f"/{mega['type2_it']}"
 
         stats = mega["stats"]
+        is_za = mega.get("za_exclusive", False)
+
         lines = [
             f"{mega['mega_name_it']} (Mega Evoluzione di {pokemon_name_it})",
             f"Tipo: {typing}",
-            f"Abilita: {mega['ability_it']} ({mega['ability']})",
-            f"Megapietra: {mega['mega_stone_it']}",
+        ]
+
+        # Ability line: only for classic megas
+        if mega["ability_it"]:
+            lines.append(f"Abilita: {mega['ability_it']} ({mega['ability']})")
+        else:
+            lines.append("Abilita: N/A (Leggende Z-A non ha abilita)")
+
+        lines.append(f"Megapietra: {mega['mega_stone_it']}")
+
+        if mega.get("z_mega"):
+            lines.append(
+                "Tipo speciale: Z Mega Evoluzione (mosse senza caricamento, "
+                "Mega Potere si esaurisce piu' rapidamente)."
+            )
+
+        lines.extend([
             "",
             "Statistiche base:",
             f"  HP: {stats['hp']} | Attacco: {stats['atk']} | Difesa: {stats['def']}",
             f"  Att.Sp: {stats['spa']} | Dif.Sp: {stats['spd']} | Velocita: {stats['spe']}",
             f"  Totale (BST): {mega['bst']}",
             "",
-            "Disponibile in: Pokemon X/Y, Rubino Omega/Zaffiro Alpha (Gen 6), "
-            "Sole/Luna, Ultrasole/Ultraluna (Gen 7).",
-        ]
+        ])
+
+        if is_za:
+            lines.append(
+                "Disponibile in: Leggende Pokemon Z-A (esclusiva)."
+            )
+        else:
+            lines.append(
+                "Disponibile in: Pokemon X/Y, Rubino Omega/Zaffiro Alpha (Gen 6), "
+                "Sole/Luna, Ultrasole/Ultraluna (Gen 7)."
+            )
 
         docs.append(Document(
             page_content="\n".join(lines),

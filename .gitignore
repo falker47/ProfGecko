@@ -25,6 +25,9 @@ Thumbs.db
 
 *.csv
 
+# Local helper scripts (called by root .bat files)
+backend/_start_*.bat
+
 # Temp dumps / debug scripts
 cache_*.json
 analyze_cache.py

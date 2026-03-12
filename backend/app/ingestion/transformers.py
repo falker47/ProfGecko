@@ -2989,7 +2989,7 @@ def build_availability_documents(
 
 def build_mega_evolution_documents(
     generation: int,
-    species_data: list[dict] | None = None,
+    species_data: dict[int, dict] | None = None,
 ) -> list[Document]:
     """Build mega evolution documents for Gen 6 and Gen 7.
 
@@ -3005,7 +3005,10 @@ def build_mega_evolution_documents(
     # Build name lookup for Italian names if species_data available
     name_it_map: dict[int, str] = {}
     if species_data:
-        for spec in species_data:
+        species_iter = (
+            species_data.values() if isinstance(species_data, dict) else species_data
+        )
+        for spec in species_iter:
             pid = spec.get("id", 0)
             for name_entry in spec.get("names", []):
                 if name_entry.get("language", {}).get("name") == "it":

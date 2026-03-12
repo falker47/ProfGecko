@@ -8,8 +8,10 @@ from app.core.generation_mapper import (
     MAX_POKEMON_PER_GEN,
     VERSION_GROUP_TO_GEN,
 )
+from app.ingestion.mega_data import MEGA_EVOLUTIONS
 from app.ingestion.smogon_client import fetch_smogon_sets
 from app.ingestion.smogon_transformer import build_smogon_documents
+from app.ingestion.supplemental_obtainment import SUPPLEMENTAL_OBTAINMENT
 from app.ingestion.translations import (
     ENCOUNTER_METHOD_IT,
     LOCATION_NAME_IT,
@@ -2805,7 +2807,14 @@ def build_encounter_documents(
                         (location, method, min_lv, max_lv, chance)
                     )
 
-        if not version_encounters:
+        # Merge supplemental obtainment data for this Pokemon/generation
+        species_name = spec.get("name", "").lower()
+        supplemental = [
+            s for s in SUPPLEMENTAL_OBTAINMENT.get(species_name, [])
+            if s["generation"] == generation
+        ]
+
+        if not version_encounters and not supplemental:
             continue
 
         # Build document text
@@ -2834,6 +2843,14 @@ def build_encounter_documents(
 
             lines.append("")
 
+        # Append supplemental obtainment methods (gifts, casino, trades, etc.)
+        if supplemental:
+            lines.append("Metodi di ottenimento aggiuntivi:")
+            for s in supplemental:
+                versions_str = ", ".join(s["versions"])
+                lines.append(f"- {s['method_it']} ({versions_str}): {s['details_it']}")
+            lines.append("")
+
         content = "\n".join(lines).rstrip()
 
         # Truncate if document is too long (keep under ~1500 chars)
@@ -2851,6 +2868,222 @@ def build_encounter_documents(
             },
         ))
 
+    return docs
+
+
+def build_availability_documents(
+    encounters_data: dict[int, list],
+    species_data: dict[int, dict],
+) -> list[Document]:
+    """Build one cross-generational availability Document per Pokemon.
+
+    Aggregates wild encounters from ALL generations plus supplemental
+    obtainment data into a single document per Pokemon.  Uses
+    ``generation: 0`` as a sentinel value for cross-generational docs.
+    """
+    docs: list[Document] = []
+
+    # Collect all Pokemon IDs that have encounters OR supplemental data
+    supp_pids: set[int] = set()
+    for species_name in SUPPLEMENTAL_OBTAINMENT:
+        for pid, spec in species_data.items():
+            if spec.get("name", "").lower() == species_name:
+                supp_pids.add(pid)
+                break
+
+    all_pids = set(encounters_data.keys()) | supp_pids
+
+    for pid in sorted(all_pids):
+        spec = species_data.get(pid)
+        if not spec:
+            continue
+
+        name_en = spec.get("name", f"pokemon-{pid}").capitalize()
+        name_it = _get_localized(spec.get("names", []), "it") or name_en
+        species_name = spec.get("name", "").lower()
+
+        # Group encounter versions by generation
+        # {gen: set(version_it)}
+        gen_versions: dict[int, set[str]] = {}
+        # {gen: {version_it: [location_summaries]}}
+        gen_details: dict[int, dict[str, list[str]]] = {}
+
+        for loc_entry in encounters_data.get(pid, []):
+            location = _format_location_name(
+                loc_entry.get("location_area", {}).get("name", "unknown")
+            )
+            for vd in loc_entry.get("version_details", []):
+                version_slug = vd.get("version", {}).get("name", "")
+                vgen = VERSION_TO_GEN.get(version_slug)
+                if vgen is None:
+                    continue
+                version_it = VERSION_NAME_IT.get(version_slug, version_slug)
+                gen_versions.setdefault(vgen, set()).add(version_it)
+                gen_details.setdefault(vgen, {}).setdefault(
+                    version_it, []
+                )
+                # Only add unique location names (skip duplicates)
+                if location not in gen_details[vgen][version_it]:
+                    gen_details[vgen][version_it].append(location)
+
+        # Merge supplemental data
+        for s in SUPPLEMENTAL_OBTAINMENT.get(species_name, []):
+            sgen = s["generation"]
+            for v in s["versions"]:
+                gen_versions.setdefault(sgen, set()).add(v)
+                gen_details.setdefault(sgen, {}).setdefault(v, [])
+                method_str = f"{s['method_it']}"
+                if method_str not in gen_details[sgen][v]:
+                    gen_details[sgen][v].append(method_str)
+
+        if not gen_versions:
+            continue
+
+        # Build compact document
+        lines = [f"Disponibilita' di {name_it} nei giochi Pokemon:", ""]
+
+        for gen in sorted(gen_versions.keys()):
+            versions = sorted(gen_versions[gen])
+            # Collect all unique locations across versions for this gen
+            all_locs: list[str] = []
+            for v in versions:
+                for loc in gen_details.get(gen, {}).get(v, []):
+                    if loc not in all_locs:
+                        all_locs.append(loc)
+            # Compact format: one line per gen
+            versions_str = ", ".join(versions)
+            if all_locs:
+                locs_str = ", ".join(all_locs[:5])
+                if len(all_locs) > 5:
+                    locs_str += ", ..."
+                lines.append(f"- Gen {gen} ({versions_str}): {locs_str}")
+            else:
+                lines.append(f"- Gen {gen} ({versions_str})")
+
+        # List missing generations
+        all_gens = set(range(1, max(MAX_POKEMON_PER_GEN.keys()) + 1))
+        missing = sorted(all_gens - set(gen_versions.keys()))
+        if missing:
+            lines.append("")
+            missing_str = ", ".join(f"Gen {g}" for g in missing)
+            lines.append(f"Non disponibile in: {missing_str}")
+
+        content = "\n".join(lines).rstrip()
+        if len(content) > 1500:
+            content = content[:1450] + "\n\n[dati aggiuntivi troncati]"
+
+        docs.append(Document(
+            page_content=content,
+            metadata={
+                "entity_type": "availability",
+                "pokemon_id": pid,
+                "name_en": name_en.lower(),
+                "name_it": name_it.lower(),
+                "generation": 0,  # sentinel for cross-generational
+            },
+        ))
+
+    logger.info("Built %d cross-generational availability documents", len(docs))
+    return docs
+
+
+def build_mega_evolution_documents(
+    generation: int,
+    species_data: list[dict] | None = None,
+) -> list[Document]:
+    """Build mega evolution documents for Gen 6 and Gen 7.
+
+    Produces:
+    - 1 summary doc listing all 48+ megas (entity_type: "summary")
+    - 1 doc per mega form with full details (entity_type: "pokemon")
+    """
+    if generation not in (6, 7):
+        return []
+
+    docs: list[Document] = []
+
+    # Build name lookup for Italian names if species_data available
+    name_it_map: dict[int, str] = {}
+    if species_data:
+        for spec in species_data:
+            pid = spec.get("id", 0)
+            for name_entry in spec.get("names", []):
+                if name_entry.get("language", {}).get("name") == "it":
+                    name_it_map[pid] = name_entry["name"]
+                    break
+
+    # --- Summary document: list of all megas ---
+    summary_lines = [
+        f"Lista completa delle Mega Evoluzioni (Generazione {generation}):",
+        f"Totale: {len(MEGA_EVOLUTIONS)} forme Mega/Ancestrali "
+        f"(46 specie, Charizard e Mewtwo hanno 2 forme ciascuno, "
+        f"+ Kyogre/Groudon Ancestrali + Mega Rayquaza).",
+        "",
+    ]
+    for mega in MEGA_EVOLUTIONS:
+        typing = mega["type1_it"]
+        if mega["type2_it"]:
+            typing += f"/{mega['type2_it']}"
+        summary_lines.append(
+            f"- {mega['mega_name_it']} ({typing}) — "
+            f"Abilita: {mega['ability_it']}, BST: {mega['bst']}"
+        )
+
+    summary_lines.append("")
+    summary_lines.append(
+        "Le Mega Evoluzioni sono disponibili in Gen 6 (X/Y, Rubino Omega/Zaffiro Alpha) "
+        "e Gen 7 (Sole/Luna, Ultrasole/Ultraluna). "
+        "Ogni Pokemon puo' megaevolversi una volta per lotta usando la Megapietra corrispondente "
+        "(Rayquaza usa la mossa Ascesa del Drago)."
+    )
+
+    docs.append(Document(
+        page_content="\n".join(summary_lines),
+        metadata={
+            "entity_type": "summary",
+            "summary_category": "mega_evolution_list",
+            "generation": generation,
+        },
+    ))
+
+    # --- Per-mega documents ---
+    for mega in MEGA_EVOLUTIONS:
+        pokemon_name_it = name_it_map.get(mega["pokemon_id"], mega["pokemon"])
+        typing = mega["type1_it"]
+        if mega["type2_it"]:
+            typing += f"/{mega['type2_it']}"
+
+        stats = mega["stats"]
+        lines = [
+            f"{mega['mega_name_it']} (Mega Evoluzione di {pokemon_name_it})",
+            f"Tipo: {typing}",
+            f"Abilita: {mega['ability_it']} ({mega['ability']})",
+            f"Megapietra: {mega['mega_stone_it']}",
+            "",
+            "Statistiche base:",
+            f"  HP: {stats['hp']} | Attacco: {stats['atk']} | Difesa: {stats['def']}",
+            f"  Att.Sp: {stats['spa']} | Dif.Sp: {stats['spd']} | Velocita: {stats['spe']}",
+            f"  Totale (BST): {mega['bst']}",
+            "",
+            "Disponibile in: Pokemon X/Y, Rubino Omega/Zaffiro Alpha (Gen 6), "
+            "Sole/Luna, Ultrasole/Ultraluna (Gen 7).",
+        ]
+
+        docs.append(Document(
+            page_content="\n".join(lines),
+            metadata={
+                "entity_type": "pokemon",
+                "pokemon_id": mega["pokemon_id"],
+                "name_en": mega["mega_name_en"].lower(),
+                "name_it": mega["mega_name_it"].lower(),
+                "generation": generation,
+            },
+        ))
+
+    logger.info(
+        "Gen %d: Built %d mega evolution documents (1 summary + %d individual)",
+        generation, len(docs), len(docs) - 1,
+    )
     return docs
 
 
@@ -2965,6 +3198,11 @@ def build_all_documents_for_generation(
             type_name_it=type_name_it,
             abilities_data=all_data.get("abilities"),
         ))
+
+    # Mega Evolutions (Gen 6 and 7 only)
+    docs.extend(build_mega_evolution_documents(
+        generation, species_data=all_data.get("species"),
+    ))
 
     # Encounters (if fetched)
     if all_data.get("encounters"):

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { invalidateCache, cleanupCache, rehashCache, getExportUrl, importCsv, reloadVectorstore, startIngestion, getIngestionStatus } from "@/lib/admin-api";
+import { invalidateCache, cleanupCache, rehashCache, exportCsv, importCsv, reloadVectorstore, startIngestion, getIngestionStatus } from "@/lib/admin-api";
 import type { IngestionStatus } from "@/lib/admin-api";
 
 interface AdminActionsProps {
@@ -162,8 +162,22 @@ export default function AdminActions({
     }
   }
 
-  function handleExport() {
-    window.open(getExportUrl(secret), "_blank");
+  async function handleExport() {
+    try {
+      const blob = await exportCsv(secret);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cache_entries.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      if (err instanceof Error && err.message === "AUTH_FAILED") {
+        onAuthFailed();
+      } else {
+        showMessage("Errore nell'export");
+      }
+    }
   }
 
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {

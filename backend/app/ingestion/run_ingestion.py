@@ -19,7 +19,10 @@ from app.core.generation_mapper import MAX_POKEMON_PER_GEN
 from app.ingestion.fetcher import fetch_all_data
 from app.ingestion.indexer import index_documents
 from app.ingestion.pokeapi_client import PokeAPIClient
-from app.ingestion.transformers import build_all_documents_for_generation
+from app.ingestion.transformers import (
+    build_all_documents_for_generation,
+    build_availability_documents,
+)
 
 
 def parse_gen_range(gen_str: str) -> list[int]:
@@ -72,6 +75,15 @@ async def main(max_id: int, force: bool, generations: list[int]):
         docs = build_all_documents_for_generation(all_data, gen)
         print(f"  Generated {len(docs)} documents")
         all_docs.extend(docs)
+
+    # Cross-generational availability documents (post-processing)
+    if all_data.get("encounters"):
+        print("\n--- Building cross-generational availability documents ---")
+        availability_docs = build_availability_documents(
+            all_data["encounters"], all_data["species"]
+        )
+        print(f"  Generated {len(availability_docs)} availability documents")
+        all_docs.extend(availability_docs)
 
     print(f"\n=== Total documents: {len(all_docs)} ===")
 

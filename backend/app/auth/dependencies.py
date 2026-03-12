@@ -1,11 +1,20 @@
 """FastAPI dependencies for authentication."""
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.jwt import decode_access_token
 
 _bearer_scheme = HTTPBearer(auto_error=False)
+
+
+async def verify_admin_secret(
+    request: Request,
+    x_admin_secret: str = Header(..., alias="X-Admin-Secret"),
+) -> None:
+    """Verify the admin secret passed via X-Admin-Secret header."""
+    if x_admin_secret != request.app.state.jwt_secret:
+        raise HTTPException(status_code=403, detail="Invalid secret")
 
 
 async def get_current_user_optional(

@@ -120,56 +120,71 @@ GAME_TITLE_TO_SLUG: dict[str, str] = {
     # Gen 2
     "oro": "gold_silver", "argento": "gold_silver", "cristallo": "gold_silver",
     "gold": "gold_silver", "silver": "gold_silver", "crystal": "gold_silver",
-    # Gen 3
+    # Gen 3 — Hoenn
     "smeraldo": "emerald", "emerald": "emerald",
     "rubino": "emerald", "zaffiro": "emerald",
     "ruby": "emerald", "sapphire": "emerald",
-    "rosso fuoco": "emerald", "rossofuoco": "emerald",
-    "verde foglia": "emerald", "verdefoglia": "emerald",
-    "firered": "emerald", "fire red": "emerald",
-    "leafgreen": "emerald", "leaf green": "emerald",
-    # Gen 4
+    # Gen 3 — Kanto remakes
+    "rosso fuoco": "firered_leafgreen", "rossofuoco": "firered_leafgreen",
+    "verde foglia": "firered_leafgreen", "verdefoglia": "firered_leafgreen",
+    "firered": "firered_leafgreen", "fire red": "firered_leafgreen",
+    "leafgreen": "firered_leafgreen", "leaf green": "firered_leafgreen",
+    # Gen 4 — Sinnoh
     "platino": "platinum", "platinum": "platinum",
     "diamante": "platinum", "diamond": "platinum",
     "perla": "platinum", "pearl": "platinum",
-    "heartgold": "platinum", "heart gold": "platinum",
-    "soulsilver": "platinum", "soul silver": "platinum",
+    # Gen 4 — Johto remakes
+    "heartgold": "heartgold_soulsilver", "heart gold": "heartgold_soulsilver",
+    "soulsilver": "heartgold_soulsilver", "soul silver": "heartgold_soulsilver",
     # Gen 5
     "nero": "black_white", "bianco": "black_white",
     "nero 2": "black_white", "nero2": "black_white",
     "bianco 2": "black_white", "bianco2": "black_white",
     "black": "black_white", "white": "black_white",
     "black 2": "black_white", "white 2": "black_white",
-    # Gen 6
+    # Gen 6 — Kalos
     "x": "x_y", "y": "x_y",
-    "rubino omega": "x_y", "zaffiro alpha": "x_y",
-    "omega ruby": "x_y", "alpha sapphire": "x_y",
-    # Gen 7
+    # Gen 6 — Hoenn remakes
+    "rubino omega": "omega_ruby_alpha_sapphire",
+    "zaffiro alpha": "omega_ruby_alpha_sapphire",
+    "omega ruby": "omega_ruby_alpha_sapphire",
+    "alpha sapphire": "omega_ruby_alpha_sapphire",
+    # Gen 7 — Alola
     "sole": "sun_moon", "luna": "sun_moon",
     "ultrasole": "sun_moon", "ultraluna": "sun_moon",
     "sun": "sun_moon", "moon": "sun_moon",
     "ultra sun": "sun_moon", "ultra moon": "sun_moon",
-    "let's go pikachu": "sun_moon", "let's go eevee": "sun_moon",
-    "lets go pikachu": "sun_moon", "lets go eevee": "sun_moon",
-    "let's go": "sun_moon",
-    # Gen 8
+    # Gen 7 — Kanto remakes
+    "let's go pikachu": "lets_go", "let's go eevee": "lets_go",
+    "lets go pikachu": "lets_go", "lets go eevee": "lets_go",
+    "let's go": "lets_go",
+    # Gen 8 — Galar
     "spada": "sword_shield", "scudo": "sword_shield",
     "sword": "sword_shield", "shield": "sword_shield",
-    "diamante lucente": "sword_shield", "perla splendente": "sword_shield",
-    "brilliant diamond": "sword_shield", "shining pearl": "sword_shield",
-    "leggende arceus": "sword_shield", "legends arceus": "sword_shield",
+    # Gen 8 — Sinnoh remakes
+    "diamante lucente": "brilliant_diamond_shining_pearl",
+    "perla splendente": "brilliant_diamond_shining_pearl",
+    "brilliant diamond": "brilliant_diamond_shining_pearl",
+    "shining pearl": "brilliant_diamond_shining_pearl",
+    # Gen 8 — Hisui
+    "leggende arceus": "legends_arceus", "legends arceus": "legends_arceus",
     # Gen 9
     "scarlatto": "scarlet_violet", "violetto": "scarlet_violet",
     "scarlet": "scarlet_violet", "violet": "scarlet_violet",
     # Abbreviazioni Smogon / community
     "rb": "red_blue", "rby": "red_blue",
     "gs": "gold_silver", "gsc": "gold_silver",
-    "rs": "emerald", "rse": "emerald", "frlg": "emerald",
-    "dp": "platinum", "dpp": "platinum", "dppt": "platinum", "hgss": "platinum",
+    "rs": "emerald", "rse": "emerald",
+    "frlg": "firered_leafgreen",
+    "dp": "platinum", "dpp": "platinum", "dppt": "platinum",
+    "hgss": "heartgold_soulsilver",
     "bw": "black_white", "bw2": "black_white",
-    "xy": "x_y", "oras": "x_y",
-    "sm": "sun_moon", "usum": "sun_moon", "lgpe": "sun_moon",
-    "ss": "sword_shield", "swsh": "sword_shield", "bdsp": "sword_shield", "pla": "sword_shield",
+    "xy": "x_y", "oras": "omega_ruby_alpha_sapphire",
+    "sm": "sun_moon", "usum": "sun_moon",
+    "lgpe": "lets_go",
+    "ss": "sword_shield", "swsh": "sword_shield",
+    "bdsp": "brilliant_diamond_shining_pearl",
+    "pla": "legends_arceus",
     "sv": "scarlet_violet",
 }
 

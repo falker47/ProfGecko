@@ -33,7 +33,7 @@ export default function MessageBubble({ message, onFeedback }: MessageBubbleProp
           </div>
         ) : (
           <Image
-            src="/Prof.Gecko.png"
+            src="/prof-gecko.webp"
             alt="Prof. Gecko"
             width={32}
             height={32}

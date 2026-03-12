@@ -23,7 +23,7 @@ export default function Header() {
     <header className="bg-emerald-700 text-white shadow-md dark:bg-emerald-900">
       <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-3 sm:gap-3">
         <Image
-          src="/Prof.Gecko.png"
+          src="/prof-gecko.webp"
           alt="Prof. Gecko"
           width={40}
           height={40}

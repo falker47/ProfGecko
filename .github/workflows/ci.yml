@@ -34,6 +34,9 @@ jobs:
           pip install ruff
           ruff check app/
 
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
   frontend:
     name: Frontend — lint & build
     runs-on: ubuntu-latest

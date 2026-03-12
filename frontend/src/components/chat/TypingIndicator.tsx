@@ -4,7 +4,7 @@ export default function TypingIndicator() {
   return (
     <div className="flex animate-[fade-in_0.3s_ease-out] items-start gap-2 px-4 py-2">
       <Image
-        src="/Prof.Gecko.png"
+        src="/prof-gecko.webp"
         alt="Prof. Gecko"
         width={32}
         height={32}

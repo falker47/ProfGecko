@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from app.ingestion.translations import translate_type as _t
 
-
 # ── Game static data ─────────────────────────────────────────────
 
 GAME_STATIC_DATA: dict[str, dict] = {
@@ -604,5 +603,344 @@ GAME_STATIC_DATA: dict[str, dict] = {
                 "Miraidon",
             ],
         },
+    },
+
+    # ═══════════════════════════════════════════════════════════════
+    # REMAKES — Entries separate per giochi con regione diversa
+    # ═══════════════════════════════════════════════════════════════
+
+    "firered_leafgreen": {
+        "game_it": "Pokemon Rosso Fuoco e Verde Foglia",
+        "game_en": "Pokemon FireRed & LeafGreen",
+        "generation": 3,
+        "region_it": "Kanto",
+        "versions": ["Rosso Fuoco", "Verde Foglia"],
+        "starters": [
+            {"name": "Bulbasaur", "type_it": f"{_t('Grass')}/{_t('Poison')}"},
+            {"name": "Charmander", "type_it": _t("Fire")},
+            {"name": "Squirtle", "type_it": _t("Water")},
+        ],
+        "best_starter": (
+            "Bulbasaur resta la scelta piu' efficiente anche in FRLG. Vantaggio contro "
+            "Brock e Misty, resiste Lt. Surge, e con le abilita' introdotte in Gen 3 "
+            "(Crescita) diventa ancora piu' versatile. Squirtle e' secondo: Blastoise "
+            "e' un tank affidabile. Charmander e' la sfida: debole alle prime palestre "
+            "ma Charizard domina il mid-late game."
+        ),
+        "best_team": (
+            "Una squadra bilanciata per Kanto (FRLG):\n"
+            "- Venusaur (Erba/Veleno) - starter, copre Acqua e Roccia\n"
+            "- Alakazam (Psico) - cattura Abra al Percorso 24, potentissimo speciale\n"
+            "- Snorlax (Normale) - cattura con Pokeflauto, bulk enorme e Riposo\n"
+            "- Lapras (Acqua/Ghiaccio) - ricevuto gratis alla Silph S.p.A., copre Drago e Volante\n"
+            "- Jolteon (Elettro) - evolvi l'Eevee di Azzurropoli, velocissimo\n"
+            "- Nidoking (Veleno/Terra) - cattura Nidoran presto, movepool vastissimo\n"
+            "Alternative valide: Arcanine (solo Rosso Fuoco), Starmie, Heracross "
+            "(Isole Spumarine postgame), Dragonite (tardi)."
+        ),
+        "legendaries": [
+            {"name": "Articuno", "type_it": f"{_t('Ice')}/{_t('Flying')}",
+             "location": "Isole Spumarine"},
+            {"name": "Zapdos", "type_it": f"{_t('Electric')}/{_t('Flying')}",
+             "location": "Centrale Elettrica"},
+            {"name": "Moltres", "type_it": f"{_t('Fire')}/{_t('Flying')}",
+             "location": "Monte Brace (Isola Uno)"},
+            {"name": "Mewtwo", "type_it": _t("Psychic"),
+             "location": "Grotta Celeste (dopo la Lega)"},
+        ],
+        "version_exclusives": {
+            "Rosso Fuoco": [
+                "Oddish", "Gloom", "Vileplume", "Psyduck", "Golduck",
+                "Growlithe", "Arcanine", "Shellder", "Cloyster",
+                "Elekid", "Electabuzz", "Scyther", "Wooper", "Quagsire",
+            ],
+            "Verde Foglia": [
+                "Bellsprout", "Weepinbell", "Victreebel", "Slowpoke", "Slowbro",
+                "Staryu", "Starmie", "Vulpix", "Ninetales",
+                "Magby", "Magmar", "Pinsir", "Marill", "Azumarill",
+            ],
+        },
+    },
+
+    "heartgold_soulsilver": {
+        "game_it": "Pokemon HeartGold e SoulSilver",
+        "game_en": "Pokemon HeartGold & SoulSilver",
+        "generation": 4,
+        "region_it": "Johto",
+        "versions": ["HeartGold", "SoulSilver"],
+        "starters": [
+            {"name": "Chikorita", "type_it": _t("Grass")},
+            {"name": "Cyndaquil", "type_it": _t("Fire")},
+            {"name": "Totodile", "type_it": _t("Water")},
+        ],
+        "best_starter": (
+            "Cyndaquil e' la scelta migliore anche in HGSS. Typhlosion e' potente e i tipi "
+            "Fuoco sono rari in Johto. Totodile e' altrettanto valido: Feraligatr con "
+            "Danzaspada e Cascata (ora fisico in Gen 4) e' devastante. Chikorita resta "
+            "la scelta piu' difficile: matchup sfavorevoli contro le prime palestre."
+        ),
+        "best_team": (
+            "Una squadra bilanciata per Johto (HGSS):\n"
+            "- Typhlosion (Fuoco) - starter, copre Acciaio e Ghiaccio\n"
+            "- Espeon (Psico) - l'Eevee ricevuto da Bill ad Amarantopoli, evolvi con amicizia di giorno\n"
+            "- Heracross (Coleottero/Lotta) - cattura con Bottintesta agli alberi, Attacco enorme\n"
+            "- Ampharos (Elettro) - cattura Mareep presto al Percorso 32, copre Acqua e Volante\n"
+            "- Red Gyarados (Acqua/Volante) - cattura obbligatoria al Lago Collera, Surf e Cascata\n"
+            "- Mamoswine (Ghiaccio/Terra) - cattura Swinub nelle Grotte di Ghiaccio, evolvi con Forzantica\n"
+            "Alternative valide: Dragonite (Tana del Drago, tardi ma devastante), "
+            "Crobat (amicizia da Zubat), Machamp (scambi), Ursaring, Togekiss (uovo Togepi)."
+        ),
+        "legendaries": [
+            {"name": "Ho-Oh", "type_it": f"{_t('Fire')}/{_t('Flying')}",
+             "location": "Torre Campanaria (HeartGold, prima della Lega)"},
+            {"name": "Lugia", "type_it": f"{_t('Psychic')}/{_t('Flying')}",
+             "location": "Isole Turbine (SoulSilver, prima della Lega)"},
+            {"name": "Raikou", "type_it": _t("Electric"),
+             "location": "Vagante per Johto (dopo Torre Bruciata)"},
+            {"name": "Entei", "type_it": _t("Fire"),
+             "location": "Vagante per Johto (dopo Torre Bruciata)"},
+            {"name": "Suicune", "type_it": _t("Water"),
+             "location": "Percorso 25 (dopo gli eventi di Kanto)"},
+            {"name": "Latias", "type_it": f"{_t('Dragon')}/{_t('Psychic')}",
+             "location": "Vagante per Kanto (HeartGold, postgame)"},
+            {"name": "Latios", "type_it": f"{_t('Dragon')}/{_t('Psychic')}",
+             "location": "Vagante per Kanto (SoulSilver, postgame)"},
+            {"name": "Groudon", "type_it": _t("Ground"),
+             "location": "Grotta Incastonata (HeartGold, con Rossa Sfera)"},
+            {"name": "Kyogre", "type_it": _t("Water"),
+             "location": "Grotta Incastonata (SoulSilver, con Blu Sfera)"},
+            {"name": "Rayquaza", "type_it": f"{_t('Dragon')}/{_t('Flying')}",
+             "location": "Grotta Incastonata (con Groudon e Kyogre)"},
+            {"name": "Mewtwo", "type_it": _t("Psychic"),
+             "location": "Grotta Celeste (Kanto postgame)"},
+        ],
+        "version_exclusives": {
+            "HeartGold": [
+                "Mankey", "Primeape", "Growlithe", "Arcanine",
+                "Spinarak", "Ariados", "Gligar", "Mantine",
+                "Phanpy", "Donphan", "Sableye", "Baltoy", "Claydol",
+                "Kyogre",
+            ],
+            "SoulSilver": [
+                "Vulpix", "Ninetales", "Meowth", "Persian",
+                "Ledyba", "Ledian", "Teddiursa", "Ursaring",
+                "Delibird", "Skarmory", "Mawile", "Gulpin", "Swalot",
+                "Groudon",
+            ],
+        },
+    },
+
+    "omega_ruby_alpha_sapphire": {
+        "game_it": "Pokemon Rubino Omega e Zaffiro Alpha",
+        "game_en": "Pokemon Omega Ruby & Alpha Sapphire",
+        "generation": 6,
+        "region_it": "Hoenn",
+        "versions": ["Rubino Omega", "Zaffiro Alpha"],
+        "starters": [
+            {"name": "Treecko", "type_it": _t("Grass")},
+            {"name": "Torchic", "type_it": _t("Fire")},
+            {"name": "Mudkip", "type_it": _t("Water")},
+        ],
+        "best_starter": (
+            "Mudkip e' la scelta migliore anche in ORAS. Swampert (Acqua/Terra) con la "
+            "Mega Evoluzione guadagna Nuotovelox e diventa devastante sotto la pioggia. "
+            "Solo una debolezza (Erba 4x). Torchic e' secondo: Blaziken con Mega Evoluzione "
+            "e Boostvelox e' uno dei Pokemon piu' forti di sempre. Treecko e' il piu' debole: "
+            "Sceptile Mega diventa Erba/Drago, interessante ma fragile."
+        ),
+        "best_team": (
+            "Una squadra bilanciata per Hoenn (ORAS):\n"
+            "- Mega Swampert (Acqua/Terra) - starter, Nuotovelox sotto pioggia\n"
+            "- Gardevoir (Psico/Folletto) - cattura Ralts al Percorso 102, Mega Evoluzione disponibile\n"
+            "- Breloom (Erba/Lotta) - cattura Shroomish nel Bosco di Petali, Sporeffetto + Tecnico\n"
+            "- Flygon (Terra/Drago) - cattura Trapinch nel Deserto, Levitazione utile\n"
+            "- Mega Aggron (Acciaio) - cattura Aron nella Grotta Pietrosa, Solidroccia pura da tank\n"
+            "- Manectric (Elettro) - cattura Electrike al Percorso 110, Mega Evoluzione disponibile\n"
+            "Alternative valide: Mega Altaria (Drago/Folletto), Mega Camerupt, Milotic, "
+            "Latios/Latias (ottenibili nella storia, Mega Evoluzione con Eon Ticket)."
+        ),
+        "legendaries": [
+            {"name": "Primal Groudon", "type_it": f"{_t('Ground')}/{_t('Fire')}",
+             "location": "Antro Abissale (Rubino Omega)"},
+            {"name": "Primal Kyogre", "type_it": _t("Water"),
+             "location": "Grotta dei Fondali (Zaffiro Alpha)"},
+            {"name": "Mega Rayquaza", "type_it": f"{_t('Dragon')}/{_t('Flying')}",
+             "location": "Torre dei Cieli (Episodio Delta)"},
+            {"name": "Deoxys", "type_it": _t("Psychic"),
+             "location": "Spazio (Episodio Delta)"},
+            {"name": "Latios", "type_it": f"{_t('Dragon')}/{_t('Psychic')}",
+             "location": "Rubino Omega (storia Eon)"},
+            {"name": "Latias", "type_it": f"{_t('Dragon')}/{_t('Psychic')}",
+             "location": "Zaffiro Alpha (storia Eon)"},
+        ],
+        "version_exclusives": {
+            "Rubino Omega": [
+                "Seedot", "Nuzleaf", "Shiftry", "Mawile",
+                "Zangoose", "Solrock", "Ho-Oh", "Palkia",
+                "Tornadus", "Reshiram",
+            ],
+            "Zaffiro Alpha": [
+                "Lotad", "Lombre", "Ludicolo", "Sableye",
+                "Seviper", "Lunatone", "Lugia", "Dialga",
+                "Thundurus", "Zekrom",
+            ],
+        },
+    },
+
+    "lets_go": {
+        "game_it": "Pokemon Let's Go, Pikachu! e Let's Go, Eevee!",
+        "game_en": "Pokemon Let's Go, Pikachu! & Let's Go, Eevee!",
+        "generation": 7,
+        "region_it": "Kanto",
+        "versions": ["Let's Go Pikachu", "Let's Go Eevee"],
+        "starters": [
+            {"name": "Pikachu", "type_it": _t("Electric")},
+            {"name": "Eevee", "type_it": _t("Normal")},
+        ],
+        "best_starter": (
+            "Il partner iniziale NON puo' evolversi, ma impara mosse esclusive potentissime. "
+            "Pikachu impara Fulmischianto (Elettro), Surfaschianto (Acqua), Ciclonaschianto "
+            "(Volante). Eevee impara mosse di 8 tipi diversi (Splendibolla, Botta Ardente, "
+            "ecc.), rendendolo incredibilmente versatile. Eevee e' leggermente superiore "
+            "per la varieta' di copertura tipo."
+        ),
+        "best_team": (
+            "Una squadra bilanciata per Kanto (Let's Go):\n"
+            "- Pikachu/Eevee partner - mosse esclusive potentissime, non evolve\n"
+            "- Venusaur, Charizard o Blastoise - ricevuto come dono nella storia\n"
+            "- Snorlax (Normale) - Pokeflauto sul Percorso 12/16, tank imbattibile\n"
+            "- Alolan Raichu o Alolan Ninetales - scambia con NPC le forme di Alola\n"
+            "- Lapras (Acqua/Ghiaccio) - ricevuto gratis alla Silph S.p.A.\n"
+            "- Aerodactyl (Roccia/Volante) - fossile dall'Ambra Antica, Velocita' altissima\n"
+            "Note: solo i 151 Pokemon originali + Meltan/Melmetal. "
+            "Niente abilita', niente strumenti tenuti, catture stile Pokemon GO."
+        ),
+        "legendaries": [
+            {"name": "Articuno", "type_it": f"{_t('Ice')}/{_t('Flying')}",
+             "location": "Isole Spumarine"},
+            {"name": "Zapdos", "type_it": f"{_t('Electric')}/{_t('Flying')}",
+             "location": "Centrale Elettrica"},
+            {"name": "Moltres", "type_it": f"{_t('Fire')}/{_t('Flying')}",
+             "location": "Via Vittoria"},
+            {"name": "Mewtwo", "type_it": _t("Psychic"),
+             "location": "Grotta Celeste (dopo la Lega)"},
+        ],
+        "version_exclusives": {
+            "Let's Go Pikachu": [
+                "Oddish", "Gloom", "Vileplume", "Sandshrew", "Sandslash",
+                "Growlithe", "Arcanine", "Grimer", "Muk", "Scyther", "Mankey", "Primeape",
+            ],
+            "Let's Go Eevee": [
+                "Bellsprout", "Weepinbell", "Victreebel", "Vulpix", "Ninetales",
+                "Meowth", "Persian", "Koffing", "Weezing", "Pinsir", "Ekans", "Arbok",
+            ],
+        },
+    },
+
+    "brilliant_diamond_shining_pearl": {
+        "game_it": "Pokemon Diamante Lucente e Perla Splendente",
+        "game_en": "Pokemon Brilliant Diamond & Shining Pearl",
+        "generation": 8,
+        "region_it": "Sinnoh",
+        "versions": ["Diamante Lucente", "Perla Splendente"],
+        "starters": [
+            {"name": "Turtwig", "type_it": _t("Grass")},
+            {"name": "Chimchar", "type_it": _t("Fire")},
+            {"name": "Piplup", "type_it": _t("Water")},
+        ],
+        "best_starter": (
+            "Chimchar resta la scelta migliore anche in BDSP. I tipi Fuoco sono rarissimi "
+            "in Sinnoh. Infernape (Fuoco/Lotta) domina le palestre e la Lega. "
+            "Piplup e' secondo: Empoleon (Acqua/Acciaio) ha una tipizzazione unica. "
+            "Il Grand Underground di BDSP rende piu' facile ottenere tipi Fuoco alternativi "
+            "(Houndoom, Magmar), ma Chimchar resta il migliore."
+        ),
+        "best_team": (
+            "Una squadra bilanciata per Sinnoh (BDSP):\n"
+            "- Infernape (Fuoco/Lotta) - starter, tipo Fuoco raro in Sinnoh\n"
+            "- Staraptor (Normale/Volante) - cattura Starly subito, Prepotenza + Zuffa\n"
+            "- Luxray (Elettro) - cattura Shinx presto, Prepotenza + Fulmindenti\n"
+            "- Garchomp (Drago/Terra) - cattura Gible nella Grotta Nascosta o Grand Underground\n"
+            "- Lucario (Lotta/Acciaio) - dall'uovo di Marisio, ottima copertura\n"
+            "- Gyarados (Acqua/Volante) - facile da ottenere, Intimidazione + Cascata\n"
+            "Alternative valide: Roserade (Veleno/Erba), Togekiss (Leggiadro), "
+            "Weavile (Buio/Ghiaccio), Gastrodon, Houndoom (Grand Underground)."
+        ),
+        "legendaries": [
+            {"name": "Dialga", "type_it": f"{_t('Steel')}/{_t('Dragon')}",
+             "location": "Vetta Lancia (Diamante Lucente)"},
+            {"name": "Palkia", "type_it": f"{_t('Water')}/{_t('Dragon')}",
+             "location": "Vetta Lancia (Perla Splendente)"},
+            {"name": "Giratina", "type_it": f"{_t('Ghost')}/{_t('Dragon')}",
+             "location": "Fonte Ritorno (postgame)"},
+            {"name": "Uxie", "type_it": _t("Psychic"),
+             "location": "Lago Sapienza"},
+            {"name": "Mesprit", "type_it": _t("Psychic"),
+             "location": "Vagante (dopo Lago Valore)"},
+            {"name": "Azelf", "type_it": _t("Psychic"),
+             "location": "Lago Coraggio"},
+        ],
+        "version_exclusives": {
+            "Diamante Lucente": [
+                "Caterpie", "Metapod", "Butterfree", "Ekans", "Arbok",
+                "Growlithe", "Arcanine", "Seel", "Dewgong", "Scyther",
+                "Murkrow", "Honchkrow", "Gligar", "Gliscor",
+                "Larvitar", "Pupitar", "Tyranitar", "Seedot", "Nuzleaf",
+                "Shiftry", "Mawile", "Cranidos", "Rampardos",
+                "Stunky", "Skuntank", "Dialga",
+            ],
+            "Perla Splendente": [
+                "Weedle", "Kakuna", "Beedrill", "Sandshrew", "Sandslash",
+                "Vulpix", "Ninetales", "Slowpoke", "Slowbro",
+                "Pinsir", "Misdreavus", "Mismagius", "Teddiursa", "Ursaring",
+                "Stantler", "Bagon", "Shelgon", "Salamence", "Lotad",
+                "Lombre", "Ludicolo", "Sableye", "Shieldon", "Bastiodon",
+                "Glameow", "Purugly", "Palkia",
+            ],
+        },
+    },
+
+    "legends_arceus": {
+        "game_it": "Pokemon Leggende: Arceus",
+        "game_en": "Pokemon Legends: Arceus",
+        "generation": 8,
+        "region_it": "Hisui",
+        "versions": ["Leggende Arceus"],
+        "starters": [
+            {"name": "Rowlet", "type_it": f"{_t('Grass')}/{_t('Flying')}"},
+            {"name": "Cyndaquil", "type_it": _t("Fire")},
+            {"name": "Oshawott", "type_it": _t("Water")},
+        ],
+        "best_starter": (
+            "Tutti e tre sono validi grazie alle loro evoluzioni Hisuiane uniche. "
+            "Cyndaquil e' leggermente consigliato: Typhlosion-Hisui (Fuoco/Spettro) "
+            "ha una tipizzazione unica e potente. Oshawott e' secondo: Samurott-Hisui "
+            "(Acqua/Buio) colpisce forte. Rowlet e' buono: Decidueye-Hisui (Erba/Lotta) "
+            "ma ha piu' debolezze."
+        ),
+        "best_team": (
+            "Una squadra bilanciata per Hisui:\n"
+            "- Typhlosion-Hisui (Fuoco/Spettro) - starter, tipizzazione unica\n"
+            "- Ursaluna (Terra/Normale) - evolvi Teddiursa con Blocco di Torba durante luna piena\n"
+            "- Kleavor (Coleottero/Roccia) - forma Hisuiana di Scyther, Lord e Custode\n"
+            "- Zoroark-Hisui (Normale/Spettro) - cattura nelle Distese Innevate, 3 immunita'\n"
+            "- Goodra-Hisui (Acciaio/Drago) - evolvi Goomy, tank con copertura eccellente\n"
+            "- Gardevoir (Psico/Folletto) o Lucario (Lotta/Acciaio) - disponibili nei Campi Cremisi\n"
+            "Note: gameplay completamente diverso dai giochi tradizionali. Niente strumenti "
+            "tenuti, niente abilita' in lotta. Sistema Agile/Potente per le mosse."
+        ),
+        "legendaries": [
+            {"name": "Dialga (Origine)", "type_it": f"{_t('Steel')}/{_t('Dragon')}",
+             "location": "Tempio di Sinnoh (storia principale)"},
+            {"name": "Palkia (Origine)", "type_it": f"{_t('Water')}/{_t('Dragon')}",
+             "location": "Tempio di Sinnoh (storia principale)"},
+            {"name": "Giratina (Origine)", "type_it": f"{_t('Ghost')}/{_t('Dragon')}",
+             "location": "Fonte Ritorno (postgame)"},
+            {"name": "Arceus", "type_it": _t("Normal"),
+             "location": "Tempio di Sinnoh (dopo aver catturato tutti i Pokemon)"},
+            {"name": "Enamorus", "type_it": f"{_t('Fairy')}/{_t('Flying')}",
+             "location": "Campi Cremisi (dopo le Forze della Natura)"},
+        ],
+        "version_exclusives": {},
     },
 }

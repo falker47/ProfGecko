@@ -93,10 +93,22 @@ PLURAL_MAP: dict[str, str] = {
     "debole": "debolezza",
     "deboli": "debolezza",
     "vulnerabile": "debolezza",
+    "vulnerabilita": "debolezza",
     "resistente": "resistenza",
     "evolve": "evoluzione",
     "evolutiva": "evoluzione",
     "evolutivo": "evoluzione",
+    # Italian — synonym clusters
+    "tecnica": "mossa",
+    "tecniche": "mossa",
+    "attacchi": "mossa",
+    "talento": "abilita",
+    "potere": "abilita",
+    "elemento": "tipo",
+    "tipologia": "tipo",
+    "carattere": "natura",
+    "personalita": "natura",
+    "indole": "natura",
     # Italian — abbreviations
     "stat": "statistica",
     "stats": "statistica",
@@ -148,6 +160,11 @@ STRATEGIC_SYNONYM_MAP: dict[str, str] = {
     "proponi": "_consiglio_",
     "proporresti": "_consiglio_",
     "proporrebbe": "_consiglio_",
+    # IT — optimal/ideal → _consiglio_
+    "ideale": "_consiglio_",
+    "ottimale": "_consiglio_",
+    "perfetto": "_consiglio_",
+    "perfetta": "_consiglio_",
     # EN — advisory intent → _consiglio_
     "suggestion": "_consiglio_",
     "suggest": "_consiglio_",
@@ -155,6 +172,15 @@ STRATEGIC_SYNONYM_MAP: dict[str, str] = {
     "recommend": "_consiglio_",
     "recommended": "_consiglio_",
     "should": "_consiglio_",
+    "ideal": "_consiglio_",
+    "optimal": "_consiglio_",
+    # IT — team terms → _squadra_
+    "squadra": "_squadra_",
+    "team": "_squadra_",
+    "formazione": "_squadra_",
+    "party": "_squadra_",
+    "roster": "_squadra_",
+    "composizione": "_squadra_",
     # IT — trainer / gym terms → _trainer_
     "capopalestra": "_trainer_",
     "capipalestra": "_trainer_",
@@ -198,6 +224,7 @@ GAME_TITLE_STOPWORDS: frozenset[str] = frozenset({
     # Gen 3
     "rubino", "zaffiro", "smeraldo", "ruby", "sapphire", "emerald",
     "rossofuoco", "verdefoglia", "firered", "leafgreen",
+    "foglia",  # "verde foglia" tokenized
     "frlg", "rse", "rs", "fr", "lg",
     # Gen 4
     "diamante", "perla", "platino", "diamond", "pearl", "platinum",
@@ -214,7 +241,7 @@ GAME_TITLE_STOPWORDS: frozenset[str] = frozenset({
     "usum", "sm",
     # Gen 8
     "spada", "scudo", "sword", "shield",
-    "swsh", "bdsp",
+    "swsh", "bdsp", "pla",
     "lucente", "splendente", "brilliant", "shining",
     "leggende", "legends",
     # Gen 9

@@ -33,7 +33,7 @@ export default function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps)
       {/* Avatar */}
       <div className="mb-5 rounded-full shadow-xl ring-2 ring-emerald-200/70 sm:ring-4 dark:ring-emerald-700/70">
         <Image
-          src="/Prof.Gecko.png"
+          src="/prof-gecko.webp"
           alt="Prof. Gecko"
           width={128}
           height={128}

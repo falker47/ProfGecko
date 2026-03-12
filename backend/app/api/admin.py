@@ -1,4 +1,4 @@
-"""Admin endpoints — ingestion + cache management (protected by JWT_SECRET)."""
+"""Admin endpoints — ingestion + cache management (protected by X-Admin-Secret header)."""
 
 import asyncio
 import csv
@@ -7,10 +7,11 @@ import logging
 import time
 from pathlib import Path as FilePath
 
-from fastapi import APIRouter, Body, File, HTTPException, Path, Query, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Path, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from app.auth.dependencies import verify_admin_secret
 from app.core.cache import ResponseCache
 
 logger = logging.getLogger(__name__)
@@ -29,22 +30,12 @@ class UpdateEntryBody(BaseModel):
 class AddStopwordsBody(BaseModel):
     words: list[str]
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(verify_admin_secret)])
 
 
 @router.get("/vectorstore/stats")
-async def vectorstore_stats(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
-    """Return vectorstore statistics (document count).
-
-    Usage:
-        GET /api/admin/vectorstore/stats?secret=YOUR_JWT_SECRET
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+async def vectorstore_stats(request: Request):
+    """Return vectorstore statistics (document count)."""
     vectorstore = getattr(request.app.state, "vectorstore", None)
     if vectorstore is None:
         raise HTTPException(status_code=503, detail="Vectorstore not initialized")
@@ -54,21 +45,12 @@ async def vectorstore_stats(
 
 
 @router.post("/reload-vectorstore")
-async def reload_vectorstore(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
+async def reload_vectorstore(request: Request):
     """Reload the in-memory vectorstore from disk without re-ingesting.
 
     Use after running `run_ingestion.bat` (CLI ingestion) to pick up
     the freshly indexed documents without restarting the backend.
-
-    Usage:
-        POST /api/admin/reload-vectorstore?secret=YOUR_JWT_SECRET
     """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
     from app.config import get_settings
     from app.core.embeddings import get_embeddings
     from app.core.llm import get_llm
@@ -129,7 +111,7 @@ async def _run_ingestion_background(app_state, force: bool):
         from app.ingestion.fetcher import fetch_all_data
         from app.ingestion.indexer import index_documents
         from app.ingestion.pokeapi_client import PokeAPIClient
-        from app.ingestion.transformers import build_all_documents_for_generation
+        from app.ingestion.transformers import build_all_documents_for_generation, build_availability_documents
 
         settings = get_settings()
         persist_dir = settings.chroma_persist_dir
@@ -174,6 +156,15 @@ async def _run_ingestion_background(app_state, force: bool):
             logger.info("Ingestion: building docs for gen %d...", gen)
             docs = build_all_documents_for_generation(all_data, gen)
             all_docs.extend(docs)
+
+        # Cross-generational availability documents (post-processing)
+        if all_data.get("encounters"):
+            logger.info("Ingestion: building cross-generational availability documents...")
+            availability_docs = build_availability_documents(
+                all_data["encounters"], all_data["species"],
+            )
+            all_docs.extend(availability_docs)
+            logger.info("Ingestion: %d availability documents added", len(availability_docs))
 
         logger.info("Ingestion: total %d documents, starting indexing...", len(all_docs))
 
@@ -230,18 +221,10 @@ async def _run_ingestion_background(app_state, force: bool):
 @router.post("/ingest")
 async def trigger_ingestion(
     request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     force: bool = Query(False),
 ):
-    """Start data ingestion in background. Poll /ingest/status for progress.
-
-    Usage:
-        POST /api/admin/ingest?secret=YOUR_JWT_SECRET&force=true
-    """
+    """Start data ingestion in background. Poll /ingest/status for progress."""
     global _ingestion_status, _ingestion_result, _ingestion_started_at
-
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
 
     if _ingestion_status == "running":
         elapsed = time.time() - (_ingestion_started_at or 0)
@@ -260,18 +243,8 @@ async def trigger_ingestion(
 
 
 @router.get("/ingest/status")
-async def ingestion_status(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
-    """Poll ingestion progress.
-
-    Usage:
-        GET /api/admin/ingest/status?secret=YOUR_JWT_SECRET
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+async def ingestion_status():
+    """Poll ingestion progress."""
     result = {
         "status": _ingestion_status,
         "started_at": _ingestion_started_at,
@@ -294,35 +267,15 @@ def _get_cache(request: Request) -> ResponseCache:
 
 
 @router.get("/cache/stats")
-async def cache_stats(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
-    """Return cache statistics (total entries, total hits).
-
-    Usage:
-        GET /api/admin/cache/stats?secret=YOUR_JWT_SECRET
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+async def cache_stats(request: Request):
+    """Return cache statistics (total entries, total hits)."""
     cache = _get_cache(request)
     return await cache.stats()
 
 
 @router.post("/cache/invalidate")
-async def cache_invalidate(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
-    """Clear the entire response cache.
-
-    Usage:
-        POST /api/admin/cache/invalidate?secret=YOUR_JWT_SECRET
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+async def cache_invalidate(request: Request):
+    """Clear the entire response cache."""
     cache = _get_cache(request)
     deleted = await cache.invalidate_all()
     return {"status": "ok", "entries_deleted": deleted}
@@ -331,17 +284,9 @@ async def cache_invalidate(
 @router.post("/cache/cleanup")
 async def cache_cleanup(
     request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     max_age_days: int = Query(90, description="Remove entries older than N days"),
 ):
-    """Remove stale cache entries that haven't been hit recently.
-
-    Usage:
-        POST /api/admin/cache/cleanup?secret=YOUR_JWT_SECRET&max_age_days=90
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+    """Remove stale cache entries that haven't been hit recently."""
     cache = _get_cache(request)
     deleted = await cache.cleanup(max_age_days=max_age_days)
     return {"status": "ok", "stale_entries_removed": deleted}
@@ -350,7 +295,6 @@ async def cache_cleanup(
 @router.get("/cache/entries")
 async def cache_list_entries(
     request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     reviewed: bool | None = Query(None, description="Filter: true=reviewed, false=not reviewed, omit=all"),
@@ -360,14 +304,7 @@ async def cache_list_entries(
     sort_by: str = Query("id", description="Column to sort by: id, generation, created_at, hit_count"),
     sort_order: str = Query("desc", description="Sort direction: asc or desc"),
 ):
-    """List cache entries with pagination, filters and sorting.
-
-    Usage:
-        GET /api/admin/cache/entries?secret=...&page=1&sort_by=hit_count&sort_order=desc
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+    """List cache entries with pagination, filters and sorting."""
     cache = _get_cache(request)
     return await cache.list_entries(
         page=page,
@@ -385,18 +322,9 @@ async def cache_list_entries(
 async def cache_update_entry(
     request: Request,
     entry_id: int = Path(..., description="Cache entry ID"),
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     body: UpdateEntryBody = Body(...),
 ):
-    """Update a cache entry's response and/or generation, mark as reviewed.
-
-    Usage:
-        PUT /api/admin/cache/entries/42?secret=...
-        Body: {"response": "New text"}  or  {"generation": 1}  or both
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+    """Update a cache entry's response and/or generation, mark as reviewed."""
     if body.response is None and body.generation is None:
         raise HTTPException(status_code=400, detail="Provide response and/or generation")
 
@@ -413,16 +341,8 @@ async def cache_update_entry(
 async def cache_approve_entry(
     request: Request,
     entry_id: int = Path(..., description="Cache entry ID"),
-    secret: str = Query(..., description="JWT_SECRET as auth"),
 ):
-    """Mark a cache entry as reviewed without changing the response.
-
-    Usage:
-        POST /api/admin/cache/entries/42/approve?secret=...
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+    """Mark a cache entry as reviewed without changing the response."""
     cache = _get_cache(request)
     success = await cache.mark_reviewed(entry_id)
     if not success:
@@ -434,16 +354,8 @@ async def cache_approve_entry(
 async def cache_delete_entry(
     request: Request,
     entry_id: int = Path(..., description="Cache entry ID"),
-    secret: str = Query(..., description="JWT_SECRET as auth"),
 ):
-    """Delete a single cache entry.
-
-    Usage:
-        DELETE /api/admin/cache/entries/42?secret=...
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+    """Delete a single cache entry."""
     cache = _get_cache(request)
     success = await cache.delete_entry(entry_id)
     if not success:
@@ -452,21 +364,12 @@ async def cache_delete_entry(
 
 
 @router.post("/cache/rehash")
-async def cache_rehash(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
+async def cache_rehash(request: Request):
     """Recompute all hashes after normalization rule changes.
 
     Run this after deploying new stopwords/synonyms to ensure
     existing entries match queries hashed with the updated rules.
-
-    Usage:
-        POST /api/admin/cache/rehash?secret=YOUR_JWT_SECRET
     """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
     cache = _get_cache(request)
     result = await cache.rehash_all()
     return {
@@ -480,7 +383,6 @@ async def cache_rehash(
 @router.get("/cache/duplicates")
 async def cache_duplicates(
     request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     generation: int | None = Query(None, description="Filter by generation"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -490,9 +392,6 @@ async def cache_duplicates(
     Useful for finding and cleaning up duplicate entries, or identifying
     stopwords that incorrectly cause different questions to hash equally.
     """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
     cache = _get_cache(request)
     return await cache.list_duplicate_groups(
         generation=generation, page=page, per_page=per_page,
@@ -500,18 +399,8 @@ async def cache_duplicates(
 
 
 @router.get("/cache/stopwords")
-async def list_stopwords(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
-    """List all custom stopwords.
-
-    Usage:
-        GET /api/admin/cache/stopwords?secret=YOUR_JWT_SECRET
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+async def list_stopwords(request: Request):
+    """List all custom stopwords."""
     cache = _get_cache(request)
     words = await cache.list_stopwords()
     return {"words": words, "total": len(words)}
@@ -520,18 +409,9 @@ async def list_stopwords(
 @router.post("/cache/stopwords")
 async def add_stopwords(
     request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     body: AddStopwordsBody = Body(...),
 ):
-    """Add custom stopwords and rehash all entries.
-
-    Usage:
-        POST /api/admin/cache/stopwords?secret=YOUR_JWT_SECRET
-        Body: {"words": ["dammi", "fammi"]}
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+    """Add custom stopwords and rehash all entries."""
     if not body.words:
         raise HTTPException(status_code=400, detail="Provide at least one word")
 
@@ -554,16 +434,8 @@ async def add_stopwords(
 async def remove_stopword(
     request: Request,
     word: str = Path(..., description="Stopword to remove"),
-    secret: str = Query(..., description="JWT_SECRET as auth"),
 ):
-    """Remove a custom stopword and rehash all entries.
-
-    Usage:
-        DELETE /api/admin/cache/stopwords/dammi?secret=YOUR_JWT_SECRET
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+    """Remove a custom stopword and rehash all entries."""
     cache = _get_cache(request)
     removed = await cache.remove_stopword(word)
     if not removed:
@@ -581,8 +453,6 @@ async def remove_stopword(
 
 @router.get("/cache/debug")
 async def cache_debug_hash(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     question: str = Query(..., description="Question to analyze"),
     generation: int = Query(9, ge=1, le=9, description="Generation (default 9)"),
 ):
@@ -590,20 +460,13 @@ async def cache_debug_hash(
 
     Use this to verify that two different phrasings produce the same
     normal_hash before testing them in the chatbot.
-
-    Usage:
-        GET /api/admin/cache/debug?secret=...&question=debolezze garchomp gen 5&generation=5
     """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
     return ResponseCache.debug_hash(question, generation)
 
 
 @router.post("/cache/import")
 async def cache_import_csv(
     request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
     file: UploadFile = File(..., description="CSV file with columns: question, generation, response"),
     skip_duplicates: bool = Query(True, description="Skip entries whose normalized hash already exists"),
 ):
@@ -611,15 +474,7 @@ async def cache_import_csv(
 
     The CSV must have at least these columns: question, generation, response.
     Other columns are ignored. Entries are stored with reviewed=0.
-
-    Usage:
-        POST /api/admin/cache/import?secret=YOUR_JWT_SECRET
-        Content-Type: multipart/form-data
-        Body: file=@seed_cache.csv
     """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="File must be a .csv")
 
@@ -658,18 +513,8 @@ async def cache_import_csv(
 
 
 @router.get("/cache/export")
-async def cache_export_csv(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
-    """Export all cache entries as a CSV file (opens in Excel / Google Sheets).
-
-    Usage:
-        GET /api/admin/cache/export?secret=YOUR_JWT_SECRET
-    """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
+async def cache_export_csv(request: Request):
+    """Export all cache entries as a CSV file (opens in Excel / Google Sheets)."""
     cache = _get_cache(request)
     rows = await cache.export_all()
 
@@ -698,20 +543,11 @@ async def cache_export_csv(
 
 
 @router.get("/db/download")
-async def download_database(
-    request: Request,
-    secret: str = Query(..., description="JWT_SECRET as auth"),
-):
+async def download_database():
     """Download the full SQLite database file.
 
     Open it with DB Browser for SQLite (https://sqlitebrowser.org/).
-
-    Usage:
-        GET /api/admin/db/download?secret=YOUR_JWT_SECRET
     """
-    if secret != request.app.state.jwt_secret:
-        raise HTTPException(status_code=403, detail="Invalid secret")
-
     from app.config import get_settings
 
     db_path = FilePath(get_settings().db_path)

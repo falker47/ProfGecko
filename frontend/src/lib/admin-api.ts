@@ -19,7 +19,6 @@ async function adminFetch(
   options?: RequestInit & { params?: Record<string, string> },
 ): Promise<Response> {
   const url = new URL(`${API_BASE_URL}${path}`);
-  url.searchParams.set("secret", secret);
   if (options?.params) {
     for (const [k, v] of Object.entries(options.params)) {
       url.searchParams.set(k, v);
@@ -28,7 +27,11 @@ async function adminFetch(
   const { params: _, ...fetchOpts } = options ?? {};
   const res = await fetch(url.toString(), {
     ...fetchOpts,
-    headers: { "Content-Type": "application/json", ...fetchOpts?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Secret": secret,
+      ...fetchOpts?.headers,
+    },
   });
   if (res.status === 403) {
     throw new Error("AUTH_FAILED");
@@ -161,7 +164,6 @@ export async function importCsv(
   file: File,
 ): Promise<{ status: string; imported: number; skipped: number; total_in_file: number }> {
   const url = new URL(`${API_BASE_URL}/api/admin/cache/import`);
-  url.searchParams.set("secret", secret);
 
   const formData = new FormData();
   formData.append("file", file);
@@ -170,6 +172,7 @@ export async function importCsv(
     method: "POST",
     body: formData,
     // NOTE: do NOT set Content-Type — browser sets it with boundary for multipart
+    headers: { "X-Admin-Secret": secret },
   });
   if (res.status === 403) {
     throw new Error("AUTH_FAILED");
@@ -303,6 +306,7 @@ export async function getIngestionStatus(
 
 // ── Export URL (no fetch, just builds the URL) ────────────────────
 
-export function getExportUrl(secret: string): string {
-  return `${API_BASE_URL}/api/admin/cache/export?secret=${encodeURIComponent(secret)}`;
+export async function exportCsv(secret: string): Promise<Blob> {
+  const res = await adminFetch(secret, "/api/admin/cache/export");
+  return res.blob();
 }

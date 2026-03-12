@@ -29,5 +29,8 @@ Thumbs.db
 cache_*.json
 analyze_cache.py
 
+# Private docs
+ROADMAP.md
+
 # Claude
 .claude

@@ -23,9 +23,13 @@ _ITEM_KEYWORDS = frozenset({
     "strumento", "strumenti", "oggetto", "oggetti",
     "bacca", "bacche", "item", "items", "berry", "berries",
     "pietra", "held item",
+    "mt", "mn", "tm", "hm",
+    "megapietra", "megapietre", "mega stone", "mega stones",
+    "cristallo z", "z crystal",
 })
 _NATURE_KEYWORDS = frozenset({
     "natura", "nature", "natures", "indole",
+    "carattere", "personalita", "personalità",
 })
 
 # Keywords that trigger game_info document injection
@@ -35,6 +39,9 @@ _GAME_INFO_KEYWORDS = frozenset({
     "esclusivo", "esclusivi", "esclusiva", "exclusive",
     "solo in", "differenze versione",
     "leggendario", "leggendari", "mitico", "mitici",
+    # Sinonimi aggiuntivi
+    "completare", "finire", "playthrough",
+    "party", "formazione",
 })
 
 # Encounter documents are excluded by default (like items/natures) to prevent
@@ -47,6 +54,24 @@ _ENCOUNTER_KEYWORDS = frozenset({
     "dove si trova", "dove trovo", "dove catturare",
     "trovo", "trova", "ottengo", "ottenere", "prendere",
     "beccare", "location", "incontro", "selvatico", "selvatici",
+    # Sinonimi aggiuntivi
+    "reperire", "reperibile", "scovare", "pescare", "pesca",
+    "compare", "appare", "avvistare", "cacciare",
+    "catturabile", "ottenibile",
+})
+
+# Cross-generational availability queries — triggers retrieval of
+# generation-0 availability documents that span all games.
+_AVAILABILITY_KEYWORDS = frozenset({
+    "in quali giochi", "in quale gioco",
+    "in quali versioni", "in quale versione",
+    "in which games", "in which versions",
+    "in che gioco", "in che versione",
+    "disponibile", "disponibilita", "disponibili", "disponibilità",
+    "giochi", "versioni",
+    # Sinonimi cross-generazionali
+    "presente", "assente",
+    "esiste in", "compare in",
 })
 
 # Smogon competitive sets: excluded by default, included when the user
@@ -77,9 +102,13 @@ _STOP_WORDS = frozenset({
     # Strategic query terms
     "squadra", "team", "build", "set", "moveset", "starter",
     "consiglio", "consigli", "consigliata", "consigliato", "consiglia",
+    "suggerisci", "suggerimento", "suggerimenti", "suggerita", "suggerito",
+    "ideale", "ottimale", "perfetto", "perfetta",
     "strategia", "competitivo", "counter", "contrastare",
     "avventura", "conviene", "alternativa", "alternative",
     "vantaggi", "svantaggi",
+    "formazione", "party", "roster", "composizione",
+    "completare", "finire", "playthrough",
     # Trainer / gym terms
     "capopalestra", "capipalestra", "superquattro",
     "campione", "champion", "palestra", "lega",
@@ -94,6 +123,10 @@ _STOP_WORDS = frozenset({
     "sole", "luna", "ultrasole", "ultraluna",
     "spada", "scudo",
     "scarlatto", "violetto",
+    # Remake game title words
+    "foglia", "fuoco", "omega", "alpha",
+    "lucente", "splendente", "leggende",
+    "heartgold", "soulsilver",
     # Breeding / egg group terms
     "gruppo", "uova", "uovo", "breeding", "accoppiamento",
     # Regional variant terms (adjectives only, not region names)
@@ -108,12 +141,23 @@ _STOP_WORDS = frozenset({
     "luogo", "posizione", "zona",
     "trovo", "trova", "ottengo", "ottenere", "prendere",
     "beccare", "selvatico", "selvatici", "incontro",
+    "reperire", "reperibile", "scovare", "pescare", "pesca",
+    "cacciare", "avvistare", "catturabile", "ottenibile",
+    # Availability/cross-gen terms
+    "giochi", "versioni", "disponibile", "disponibili",
+    "disponibilita", "presente", "assente",
     # Termini Pokemon generici
     "pokemon", "pokémon",
     "tipo", "tipi", "mossa", "mosse", "abilita", "abilità", "stat", "statistiche",
     "debolezze", "debolezza", "resistenze", "resistenza", "immunita", "immunità",
     "generazione", "gen", "catena", "evolutiva", "evoluzione",
     "base", "totale", "velocita", "velocità", "attacco", "difesa", "speciale",
+    # Sinonimi termini Pokemon
+    "tecnica", "tecniche",  # sinonimo di mossa
+    "talento", "potere",  # sinonimo di abilita
+    "vulnerabile", "vulnerabilita", "punto",  # sinonimo di debolezza
+    "carattere", "personalita", "indole", "natura",  # sinonimo di nature
+    "elemento", "tipologia",  # sinonimo di tipo
     # Verbi/termini aggiuntivi
     "qual", "quando", "quanti", "quante",
     "tasso", "crescita",
@@ -174,8 +218,14 @@ _SUMMARY_KEYWORD_MAP: list[tuple[list[str], list[str]]] = [
         ["type_distribution"],
     ),
     (
-        ["squadra", "team", "roster", "composizione"],
+        ["squadra", "team", "roster", "composizione", "formazione", "party"],
         ["team_roster_by_role"],
+    ),
+    (
+        ["mega evoluzione", "megaevoluzione", "mega evoluzioni",
+         "megaevoluzioni", "mega evolution", "mega evolutions",
+         "quante mega", "lista mega", "mega stone", "megapietre"],
+        ["mega_evolution_list"],
     ),
 ]
 
@@ -211,6 +261,9 @@ def _detect_excluded_types(question: str) -> list[str]:
         excluded.append("nature")
     if not any(kw in q for kw in _ENCOUNTER_KEYWORDS):
         excluded.append("encounter")
+    # Availability docs (cross-gen) are only included for availability queries
+    if not any(kw in q for kw in _AVAILABILITY_KEYWORDS):
+        excluded.append("availability")
     # Include Smogon sets when: explicit Smogon keywords OR strategic query
     if not any(kw in q for kw in _SMOGON_KEYWORDS) and not _is_strategic_query(q):
         excluded.append("smogon_set")
@@ -220,11 +273,14 @@ def _detect_excluded_types(question: str) -> list[str]:
 # --- Strategic query detection ---
 _STRATEGIC_KEYWORDS: list[str] = [
     # Team building
-    "squadra", "team", "roster", "composizione",
+    "squadra", "team", "roster", "composizione", "formazione", "party",
     # Build / moveset
     "build", "moveset", "miglior set",
     # Advice
     "consigliata", "consigliato", "consigli", "consiglio", "consiglia",
+    "suggerisci", "suggerimento", "suggerimenti", "suggerita", "suggerito",
+    # Best / optimal
+    "ideale", "ottimale", "perfetto", "perfetta",
     # Starter
     "starter", "iniziale", "quale scegliere",
     # Strategy
@@ -237,7 +293,7 @@ _STRATEGIC_KEYWORDS: list[str] = [
     "pro e contro", "vantaggi", "svantaggi",
     "alternativa", "alternative",
     # In-game playthrough
-    "avventura", "playthrough", "completare",
+    "avventura", "playthrough", "completare", "finire",
     # Trainers / gym leaders
     "capopalestra", "capipalestra", "superquattro", "elite four",
     "campione", "champion", "palestra", "lega",
@@ -288,6 +344,7 @@ def _extract_candidate_names(question: str) -> list[str]:
 # Keywords that indicate a team-building query (subset of _STRATEGIC_KEYWORDS)
 _TEAM_KEYWORDS = frozenset({
     "squadra", "team", "roster", "composizione",
+    "formazione", "party",
 })
 
 
@@ -592,12 +649,16 @@ class RAGChain:
         # Detect "best/recommendation" intent
         _best_kw = ("miglior", "migliore", "migliori", "best",
                      "consiglio", "consigliato", "consigliata",
-                     "quale scegliere", "chi scegliere")
+                     "quale scegliere", "chi scegliere",
+                     "suggerisci", "suggerimento", "suggerimenti",
+                     "ideale", "ottimale", "perfetto", "perfetta")
         is_best = any(kw in q for kw in _best_kw)
 
         if any(kw in q for kw in ("starter", "iniziale", "iniziali")):
             categories.append("best_starter" if is_best else "starters")
-        if any(kw in q for kw in ("squadra", "team", "pokemon da usare")):
+        if any(kw in q for kw in ("squadra", "team", "pokemon da usare",
+                                   "party", "formazione",
+                                   "completare", "finire", "playthrough")):
             categories.append("best_team" if is_best else "starters")
 
         if any(kw in q for kw in ("esclusivo", "esclusivi", "esclusiva", "exclusive",
@@ -649,6 +710,69 @@ class RAGChain:
                 categories,
             )
         return docs
+
+    def _find_availability_docs(
+        self,
+        question: str,
+        retrieval_query: str | None = None,
+    ) -> list[Document]:
+        """Fetch cross-generational availability documents (generation: 0).
+
+        Used when the user asks "in quali giochi posso catturare X" — retrieves
+        the aggregated availability doc that spans all generations.
+        """
+        q = question.lower()
+        if not any(kw in q for kw in _AVAILABILITY_KEYWORDS):
+            return []
+
+        candidates = _extract_candidate_names(question)
+        if retrieval_query and retrieval_query != question:
+            for name in _extract_candidate_names(retrieval_query):
+                if name not in candidates:
+                    candidates.append(name)
+        if not candidates:
+            return []
+
+        collection = self.vectorstore._collection
+        found_docs: list[Document] = []
+        found_ids: set[str] = set()
+
+        for name in candidates:
+            try:
+                results = collection.get(
+                    where={
+                        "$and": [
+                            {"generation": 0},
+                            {"entity_type": "availability"},
+                            {"$or": [
+                                {"name_it": name},
+                                {"name_en": name},
+                            ]},
+                        ],
+                    },
+                    include=["documents", "metadatas"],
+                )
+            except Exception:
+                logger.warning(
+                    "Chroma availability query failed for %r",
+                    name, exc_info=True,
+                )
+                continue
+
+            for j, doc_id in enumerate(results["ids"]):
+                if doc_id not in found_ids:
+                    found_ids.add(doc_id)
+                    found_docs.append(Document(
+                        page_content=results["documents"][j],
+                        metadata=results["metadatas"][j],
+                    ))
+
+        if found_docs:
+            logger.info(
+                "Availability docs for %r: found %d docs",
+                candidates, len(found_docs),
+            )
+        return found_docs
 
     def _retrieve(
         self,
@@ -717,6 +841,13 @@ class RAGChain:
                     "Dropped summary categories %s (game-specific docs for %s)",
                     drop, game_slug,
                 )
+
+        # Phase 0.5: cross-generational availability docs (generation: 0)
+        # Per query come "in quali giochi posso catturare Dratini", recupera
+        # i documenti aggregati che coprono tutte le generazioni.
+        availability_docs: list[Document] = self._find_availability_docs(
+            original_question, retrieval_query=retrieval_query,
+        )
 
         # Phase 1: exact name matching sui metadata
         # Usa sia la domanda originale che la retrieval_query arricchita
@@ -787,13 +918,18 @@ class RAGChain:
                         [d.metadata.get("name_it") for d in team_build_docs],
                     )
 
-        # Combina summary + trainer + name match + team build (summary e trainer prima)
+        # Combina summary + availability + trainer + name match + team build
         pre_contents = {s.page_content for s in summary_docs}
         pre_docs = summary_docs + [
+            d for d in availability_docs
+            if d.page_content not in pre_contents
+        ]
+        pre_contents.update(d.page_content for d in availability_docs)
+        pre_docs += [
             d for d in trainer_docs
             if d.page_content not in pre_contents
         ]
-        pre_contents.update(d.page_content for d in pre_docs)
+        pre_contents.update(d.page_content for d in trainer_docs)
         pre_docs += [
             d for d in exact_docs
             if d.page_content not in pre_contents
@@ -852,13 +988,14 @@ class RAGChain:
         final_docs = pre_docs[:effective_k]
 
         logger.info(
-            "Query: %r | Gen: %d | Strategic: %s | Team: %s | Excluded: %s | Summary: %d | Trainer: %d | NameMatch: %d | TeamBuild: %d | Semantic: %d | Final: %d | Types: %s",
+            "Query: %r | Gen: %d | Strategic: %s | Team: %s | Excluded: %s | Summary: %d | Availability: %d | Trainer: %d | NameMatch: %d | TeamBuild: %d | Semantic: %d | Final: %d | Types: %s",
             retrieval_query[:80],
             generation,
             is_strategic,
             is_team_query,
             excluded,
             len(summary_docs),
+            len(availability_docs),
             len(trainer_docs),
             len(exact_docs),
             len(team_build_docs),
@@ -1009,13 +1146,14 @@ class RAGChain:
         - ``was_missing``: bool
 
         Cache eligibility:
-        - First question (no history): always cacheable.
-        - Standalone question (>= 6 words) even with history: cacheable,
-          because its meaning doesn't depend on previous messages.
-        - Short follow-up (< 6 words, e.g. "e le mosse?"): NOT cacheable,
-          because its meaning depends on the conversation context.
+        - ONLY the first question of a chat is cacheable (no prior
+          assistant messages in history).
+        - Follow-up questions are never cached because their meaning
+          depends on the conversation context.
 
-        Uses the same word-count threshold as _build_retrieval_query.
+        NOTE: history_list may contain the current user message itself
+        (sent by the frontend). We check for prior *assistant* messages
+        to determine if there's actual conversation context.
         """
         meta = metadata if metadata is not None else {}
         meta.setdefault("cache_hit", False)
@@ -1024,27 +1162,18 @@ class RAGChain:
         history_list = chat_history or []
         generation = self._detect_generation_with_history(question, history_list)
 
-        # A question is cacheable if it's the first in the conversation
-        # OR if it's self-contained (>= 6 words, meaning doesn't depend
-        # on chat history). Short follow-ups like "e le mosse?" are
-        # context-dependent and cannot be meaningfully cached.
-        #
-        # NOTE: history_list may contain the current user message itself
-        # (sent by the frontend). We check for prior *assistant* messages
-        # to determine if there's actual conversation context.
-        word_count = len(question.split())
+        # Only the first question of a conversation is cacheable.
+        # Follow-ups always depend on context and cannot be cached.
         has_prior_context = any(m["role"] == "assistant" for m in history_list)
-        is_cacheable = not has_prior_context or word_count >= _SELF_CONTAINED_WORD_COUNT
+        is_cacheable = not has_prior_context
 
-        # Game-specific game_info queries must bypass cache because the
-        # cache normalizes away game titles (e.g. "platino"), making
-        # "leggendari platino" hash-equal to "leggendari gen 4" despite
-        # requiring different answers (game-specific vs gen-wide).
+        # Game-specific queries (e.g. "leggendari platino") are NOT cacheable
+        # because the hash normalization strips game titles, causing false
+        # positives between different games in the same generation
+        # (e.g. "leggendari platino" ≠ "leggendari diamante").
         if is_cacheable:
             _game_slug = detect_game_slug(question)
-            if _game_slug and any(
-                kw in question.lower() for kw in _GAME_INFO_KEYWORDS
-            ):
+            if _game_slug and any(kw in question.lower() for kw in _GAME_INFO_KEYWORDS):
                 is_cacheable = False
 
         if cache and is_cacheable:

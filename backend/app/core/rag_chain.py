@@ -14,6 +14,63 @@ from app.core.prompts import PROF_GECKO_STRATEGIC_PROMPT, PROF_GECKO_SYSTEM_PROM
 
 logger = logging.getLogger(__name__)
 
+# --- Language detection for response language enforcement ---
+
+# Common Italian words (articles, prepositions, question words)
+_ITALIAN_MARKERS = frozenset({
+    "il", "lo", "la", "le", "gli", "un", "una", "dei", "del", "della",
+    "delle", "degli", "nel", "nella", "sul", "alla", "che", "come",
+    "quali", "quale", "quanto", "quanti", "quante", "dove", "quando",
+    "perche", "cosa", "chi", "sono", "hai", "puoi", "dimmi", "vorrei",
+    "posso", "pokemon", "tipo", "mosse", "mossa", "abilita",
+    "debolezze", "resistenze", "statistiche", "evolve", "evoluzione",
+    "catturare", "ottenere", "migliore", "migliori",
+})
+
+_ENGLISH_MARKERS = frozenset({
+    "the", "what", "which", "how", "where", "when", "who", "does",
+    "can", "could", "should", "would", "tell", "show", "give",
+    "about", "with", "from", "into", "this", "that", "these",
+    "moves", "move", "ability", "abilities", "weakness", "weaknesses",
+    "type", "stats", "catch", "evolve", "evolution", "best",
+    "strongest", "fastest", "learn",
+})
+
+_LANG_IT = (
+    "- RISPONDI IN ITALIANO. L'utente ha scritto in italiano.\n"
+    "- Se l'utente scrive in italiano, rispondi in italiano.\n"
+    "- Se l'utente scrive in inglese, rispondi in inglese."
+)
+_LANG_EN = (
+    "- RESPOND IN ENGLISH. The user wrote in English.\n"
+    "- If the user writes in English, respond in English.\n"
+    "- If the user writes in Italian, respond in Italian."
+)
+_LANG_DEFAULT = (
+    "- Se l'utente scrive in italiano, rispondi in italiano.\n"
+    "- Se l'utente scrive in inglese, rispondi in inglese.\n"
+    "- Per qualsiasi altra lingua, rispondi in inglese."
+)
+
+
+def _detect_language_instruction(question: str) -> str:
+    """Detect user language and return a strong instruction for the LLM.
+
+    Returns an explicit instruction string that gets injected into the
+    system prompt to ensure the LLM responds in the correct language,
+    even when all context documents are in Italian.
+    """
+    words = set(re.findall(r"[a-zA-ZÀ-ÿ]+", question.lower()))
+    it_score = len(words & _ITALIAN_MARKERS)
+    en_score = len(words & _ENGLISH_MARKERS)
+
+    if en_score > it_score:
+        return _LANG_EN
+    if it_score > en_score:
+        return _LANG_IT
+    return _LANG_DEFAULT
+
+
 # --- Entity-type intent detection ---
 # Items e nature vengono esclusi dal retrieval di default perche'
 # sommergono i risultati per le query su Pokemon/mosse/tipi/abilita'.
@@ -316,9 +373,10 @@ def _extract_candidate_names(question: str) -> list[str]:
     Ritorna parole di almeno 3 caratteri, rimuovendo stop words e
     punteggiatura. Usato per il matching diretto sui metadata ChromaDB.
 
-    Quando rileva una regione (alola, galar, hisui, paldea) insieme a un
-    nome Pokemon, costruisce anche il nome composto "pokemon-regione"
-    (es. "raichu-alola") per matchare le varianti regionali.
+    Genera anche nomi composti per:
+    - Varianti regionali: "raichu alola" → "raichu-alola"
+    - Nomi multi-parola: "iron moth" → "iron-moth" (Paradox Pokemon,
+      Mega Evolution, ecc.)
     """
     words = re.findall(r"[a-zA-ZÀ-ÿ\-]+", question.lower())
     base_candidates = [
@@ -330,13 +388,25 @@ def _extract_candidate_names(question: str) -> list[str]:
     regions_found = [w for w in base_candidates if w in _REGION_NAMES]
     non_region = [w for w in base_candidates if w not in _REGION_NAMES]
 
+    compound_names: list[str] = []
+
     # Build compound names: "pokemon-region" (e.g. "raichu-alola")
     if regions_found and non_region:
-        compound_names = []
         for name in non_region:
             for region in regions_found:
                 compound_names.append(f"{name}-{region}")
-        # Put compound names first (more specific), then individual names
+
+    # Build hyphenated pairs from consecutive non-stop words.
+    # Covers multi-word English Pokemon names stored as "iron-moth",
+    # "great-tusk", "roaring-moon", "flutter-mane", etc. in PokeAPI.
+    if len(non_region) >= 2:
+        for i in range(len(non_region) - 1):
+            pair = f"{non_region[i]}-{non_region[i + 1]}"
+            if pair not in compound_names:
+                compound_names.append(pair)
+
+    if compound_names:
+        # Most specific first, then individual words
         return compound_names + non_region
     return base_candidates
 
@@ -1064,6 +1134,7 @@ class RAGChain:
         context = _format_docs(docs)
         history = _convert_chat_history(history_list)
 
+        lang_instruction = _detect_language_instruction(question)
         selected_prompt = self.strategic_prompt if is_strategic else self.prompt
         chain = selected_prompt | self.llm | self.output_parser
         return chain.invoke({
@@ -1071,6 +1142,7 @@ class RAGChain:
             "context": context,
             "generation": generation,
             "chat_history": history,
+            "language_instruction": lang_instruction,
         })
 
     async def ainvoke(
@@ -1089,6 +1161,7 @@ class RAGChain:
         context = _format_docs(docs)
         history = _convert_chat_history(history_list)
 
+        lang_instruction = _detect_language_instruction(question)
         selected_prompt = self.strategic_prompt if is_strategic else self.prompt
         chain = selected_prompt | self.llm | self.output_parser
         return await chain.ainvoke({
@@ -1096,6 +1169,7 @@ class RAGChain:
             "context": context,
             "generation": generation,
             "chat_history": history,
+            "language_instruction": lang_instruction,
         })
 
     async def astream(
@@ -1114,6 +1188,7 @@ class RAGChain:
         context = _format_docs(docs)
         history = _convert_chat_history(history_list)
 
+        lang_instruction = _detect_language_instruction(question)
         selected_prompt = self.strategic_prompt if is_strategic else self.prompt
 
         invoke_args = {
@@ -1121,6 +1196,7 @@ class RAGChain:
             "context": context,
             "generation": generation,
             "chat_history": history,
+            "language_instruction": lang_instruction,
         }
 
         # Try primary LLM, fallback on 429 / quota errors

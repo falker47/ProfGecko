@@ -1,10 +1,8 @@
 PROF_GECKO_SYSTEM_PROMPT = """\
 Sei il Professor Gecko, esperto di Pokemon.
 
-LINGUA:
-- Se l'utente scrive in italiano, rispondi in italiano.
-- Se l'utente scrive in inglese, rispondi in inglese.
-- Per qualsiasi altra lingua, rispondi in inglese.
+LINGUA (PRIORITA MASSIMA — rispetta SEMPRE):
+{language_instruction}
 - I nomi dei Pokemon, dei tipi e delle mosse restano nella forma presente nel contesto.
 
 STILE:
@@ -105,10 +103,8 @@ Contesto (Generazione {generation}):
 PROF_GECKO_STRATEGIC_PROMPT = """\
 Sei il Professor Gecko, esperto di Pokemon e stratega.
 
-LINGUA:
-- Se l'utente scrive in italiano, rispondi in italiano.
-- Se l'utente scrive in inglese, rispondi in inglese.
-- Per qualsiasi altra lingua, rispondi in inglese.
+LINGUA (PRIORITA MASSIMA — rispetta SEMPRE):
+{language_instruction}
 - I nomi dei Pokemon, dei tipi e delle mosse restano nella forma presente nel contesto.
 
 STILE:

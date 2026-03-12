@@ -14,9 +14,6 @@ our ChromaDB documents (e.g. "Roccia", "Acqua", "Fuoco").
 
 from __future__ import annotations
 
-from app.ingestion.translations import translate_type as _t
-
-
 # ── Trainer data per game ────────────────────────────────────────
 
 TRAINER_DATA: dict[str, dict] = {
